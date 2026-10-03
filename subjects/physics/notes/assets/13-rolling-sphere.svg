@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" width="760" height="420">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <style>
+    text{font-family:Arial,sans-serif;font-size:24px;fill:currentColor}
+    .s{stroke:currentColor;stroke-width:3;fill:none}
+    .d{stroke:currentColor;stroke-width:2;stroke-dasharray:8 7;fill:none}
+  </style>
+  <line class="s" x1="90" y1="330" x2="665" y2="330"/>
+  <line class="s" x1="90" y1="330" x2="620" y2="115"/>
+  <circle class="s" cx="310" cy="240" r="58"/>
+  <line class="d" x1="310" y1="240" x2="365" y2="218"/>
+  <text x="337" y="225">R</text>
+  <path class="s" d="M270 185 A70 70 0 0 1 355 180" marker-end="url(#arrow)"/>
+  <text x="304" y="160">ω</text>
+  <line class="s" x1="370" y1="214" x2="495" y2="165" marker-end="url(#arrow)"/>
+  <text x="500" y="164">v</text>
+  <text x="465" y="370">v = ωR</text>
+  <text x="118" y="385">качение без проскальзывания</text>
+</svg>
