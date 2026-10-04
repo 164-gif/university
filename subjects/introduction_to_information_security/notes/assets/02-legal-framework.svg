@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 720">
+<style>
+text{font-family:Arial,sans-serif;fill:currentColor}
+.box{fill:none;stroke:currentColor;stroke-width:3;rx:14}
+.line{stroke:currentColor;stroke-width:3;fill:none}
+.label{font-size:24px}
+.small{font-size:19px}
+</style>
+<rect class="box" x="365" y="35" width="250" height="70"/>
+<text class="label" x="490" y="78" text-anchor="middle">Конституция РФ</text>
+<path class="line" d="M490 105 V145"/>
+<rect class="box" x="315" y="145" width="350" height="75"/>
+<text class="label" x="490" y="190" text-anchor="middle">Международные документы</text>
+<path class="line" d="M490 220 V260"/>
+<rect class="box" x="255" y="260" width="470" height="105"/>
+<text class="label" x="490" y="300" text-anchor="middle">Концептуальные документы</text>
+<text class="small" x="490" y="335" text-anchor="middle">(доктрины и документы по безопасности)</text>
+<path class="line" d="M490 365 V420 M490 420 H170 V465 M490 420 V465 M490 420 H810 V465"/>
+<rect class="box" x="65" y="465" width="210" height="75"/>
+<text class="label" x="170" y="510" text-anchor="middle">Законы</text>
+<rect class="box" x="385" y="465" width="210" height="75"/>
+<text class="label" x="490" y="510" text-anchor="middle">Кодексы</text>
+<rect class="box" x="680" y="465" width="260" height="75"/>
+<text class="label" x="810" y="495" text-anchor="middle">Организационные</text>
+<text class="label" x="810" y="525" text-anchor="middle">документы</text>
+<text class="small" x="490" y="620" text-anchor="middle">Схема восстановлена по рисунку 1000037486</text>
+<text class="small" x="490" y="650" text-anchor="middle">Не является актуальной юридической классификацией</text>
+</svg>
