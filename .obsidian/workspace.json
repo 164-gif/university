@@ -190,6 +190,10 @@
   },
   "active": "315886941e1b5638",
   "lastOpenFiles": [
+    "usethis.md",
+    "templates/there_might_be_a_mistake_template.md",
+    "subjects/introduction_to_information_security/checks/There might be a mistake.md",
+    "subjects/introduction_to_information_security/checks",
     "docs/FACT_CHECK_POLICY.md",
     "docs/TRANSCRIPTION_POLICY.md",
     "docs/REPO_RULES.md",
@@ -222,15 +226,12 @@
     "subjects/introduction_to_information_security/summaries/01 - Краткий конспект.md",
     "subjects/introduction_to_information_security/raw/IMAGE_INDEX.md",
     "subjects/introduction_to_information_security/notes/assets",
-    "subjects/introduction_to_information_security/concepts/TERMS.md",
     "subjects/introduction_to_information_security/transcripts",
     "subjects/introduction_to_information_security/summaries",
     "subjects/introduction_to_information_security/raw",
     "subjects/introduction_to_information_security/notes",
     "subjects/introduction_to_information_security/exam",
     "subjects/introduction_to_information_security/concepts",
-    "subjects/introduction_to_information_security/README.md",
-    "subjects/introduction_to_information_security/OBSIDIAN_NOTES_RULES.md",
     "subjects/introduction_to_information_security"
   ]
 }
