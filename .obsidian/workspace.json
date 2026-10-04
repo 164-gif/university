@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "subjects/physics/notes/07 - Работа, мощность и механическая энергия.md",
+                "file": "AGENTS.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "07 - Работа, мощность и механическая энергия"
+              "title": "AGENTS"
             }
           }
         ]
@@ -190,6 +190,24 @@
   },
   "active": "315886941e1b5638",
   "lastOpenFiles": [
+    "docs/TRANSCRIPTION_POLICY.md",
+    "docs/REPO_RULES.md",
+    "docs/QUALITY_CHECKLIST.md",
+    "docs/OBSIDIAN_GUIDE.md",
+    "docs/IMAGE_NOTES_POLICY.md",
+    "docs/EXAM_PREP.md",
+    "docs/AUDIO_PIPELINE.md",
+    "docs/AGENT_WORKFLOW.md",
+    "subjects/physics/notes/13 - Момент инерции и кинетическая энергия вращения.md",
+    "subjects/physics/notes/11 - Консервативные силы и закон сохранения механической энергии.md",
+    "subjects/physics/notes/10 - Основные типы взаимодействий.md",
+    "subjects/physics/notes/09 - Центр масс механической системы.md",
+    "subjects/introduction_to_information_security/notes/02 - Правовая защита и государственная тайна.md",
+    "subjects/introduction_to_information_security/notes/03 - Коммерческая тайна и организационная защита.md",
+    "subjects/introduction_to_information_security/notes/01 - Информация как объект защиты.md",
+    "subjects/introduction_to_information_security/notes/00 - Введение в информационную безопасность.md",
+    "subjects/introduction_to_information_security/exam/QUESTIONS.md",
+    "subjects/physics/notes/07 - Работа, мощность и механическая энергия.md",
     "subjects/physics/notes/assets/14-torque.svg",
     "subjects/physics/notes/assets/13-rolling-sphere.svg",
     "subjects/physics/notes/assets/13-moment-inertia-system.svg",
@@ -203,11 +221,6 @@
     "subjects/introduction_to_information_security/summaries/01 - Краткий конспект.md",
     "subjects/introduction_to_information_security/raw/IMAGE_INDEX.md",
     "subjects/introduction_to_information_security/notes/assets",
-    "subjects/introduction_to_information_security/notes/03 - Коммерческая тайна и организационная защита.md",
-    "subjects/introduction_to_information_security/notes/02 - Правовая защита и государственная тайна.md",
-    "subjects/introduction_to_information_security/notes/01 - Информация как объект защиты.md",
-    "subjects/introduction_to_information_security/notes/00 - Введение в информационную безопасность.md",
-    "subjects/introduction_to_information_security/exam/QUESTIONS.md",
     "subjects/introduction_to_information_security/concepts/TERMS.md",
     "subjects/introduction_to_information_security/transcripts",
     "subjects/introduction_to_information_security/summaries",
@@ -218,15 +231,6 @@
     "subjects/introduction_to_information_security/README.md",
     "subjects/introduction_to_information_security/OBSIDIAN_NOTES_RULES.md",
     "subjects/introduction_to_information_security",
-    "subjects/physics/notes/14 - Момент силы.md",
-    "subjects/physics/notes/01 - Механика. Кинематика и механическое движение.md",
-    "subjects/physics/notes/08 - Механика переменной массы и реактивное движение.md",
-    "subjects/physics/notes/09 - Центр масс механической системы.md",
-    "subjects/physics/notes/10 - Основные типы взаимодействий.md",
-    "subjects/physics/notes/11 - Консервативные силы и закон сохранения механической энергии.md",
-    "subjects/physics/notes/12 - Удар, коэффициент восстановления и столкновения.md",
-    "subjects/physics/notes/13 - Момент инерции и кинетическая энергия вращения.md",
-    "subjects/physics/notes/00 - Физика.md",
-    "subjects/physics/notes/03 - Ускорение и классификация движения.md"
+    "subjects/physics/notes/14 - Момент силы.md"
   ]
 }
