@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520">
+<style>
+text{font-family:Arial,sans-serif;fill:currentColor}
+.box{fill:none;stroke:currentColor;stroke-width:3;rx:14}
+.line{stroke:currentColor;stroke-width:3;fill:none}
+.title{font-size:32px;font-weight:700}
+.label{font-size:24px}
+.small{font-size:20px}
+</style>
+<rect class="box" x="405" y="40" width="170" height="70"/>
+<text class="title" x="490" y="85" text-anchor="middle">ИБ</text>
+<path class="line" d="M490 110 V165 M490 165 H155 V205 M490 165 H385 V205 M490 165 H615 V205 M490 165 H835 V205"/>
+<rect class="box" x="35" y="205" width="240" height="105"/>
+<text class="label" x="155" y="245" text-anchor="middle">Организационно-</text>
+<text class="label" x="155" y="278" text-anchor="middle">правовая защита</text>
+<rect class="box" x="295" y="205" width="260" height="105"/>
+<text class="label" x="425" y="245" text-anchor="middle">Инженерно-</text>
+<text class="label" x="425" y="278" text-anchor="middle">техническая защита</text>
+<rect class="box" x="575" y="205" width="250" height="105"/>
+<text class="label" x="700" y="245" text-anchor="middle">Программно-</text>
+<text class="label" x="700" y="278" text-anchor="middle">аппаратная защита</text>
+<rect class="box" x="735" y="360" width="220" height="105"/>
+<text class="label" x="845" y="400" text-anchor="middle">Криптографическая</text>
+<text class="label" x="845" y="433" text-anchor="middle">защита</text>
+<path class="line" d="M700 310 V340 H845 V360"/>
+<text class="small" x="490" y="505" text-anchor="middle">Схема восстановлена по рисункам 1000037484–1000037485</text>
+</svg>
