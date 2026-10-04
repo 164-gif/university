@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 760">
+<style>text{font-family:Arial,sans-serif;fill:currentColor}.b{fill:none;stroke:currentColor;stroke-width:3;rx:16}.l{stroke:currentColor;stroke-width:3;fill:none}.t{font-size:28px;font-weight:700}.s{font-size:22px}.m{font-size:18px}</style>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L9 3L0 6z" fill="currentColor"/></marker></defs>
+<text class="t" x="550" y="45" text-anchor="middle">Остановка наружного кровотечения — структура лекции</text>
+<rect class="b" x="365" y="80" width="370" height="70"/><text class="s" x="550" y="123" text-anchor="middle">Безопасность + защита от крови</text>
+<path class="l" d="M550 150V200" marker-end="url(#a)"/><rect class="b" x="365" y="205" width="370" height="70"/><text class="s" x="550" y="248" text-anchor="middle">Прямое давление на рану</text>
+<path class="l" d="M550 275V325" marker-end="url(#a)"/><rect class="b" x="365" y="330" width="370" height="70"/><text class="s" x="550" y="373" text-anchor="middle">Давящая повязка</text>
+<path class="l" d="M550 400V450" marker-end="url(#a)"/><rect class="b" x="310" y="455" width="480" height="85"/><text class="s" x="550" y="492" text-anchor="middle">Сильное кровотечение из конечности</text><text class="m" x="550" y="520" text-anchor="middle">другие способы неэффективны → жгут</text>
+<path class="l" d="M550 540V590" marker-end="url(#a)"/><rect class="b" x="300" y="595" width="500" height="90"/><text class="s" x="550" y="632" text-anchor="middle">Записать время + контролировать состояние</text><text class="m" x="550" y="663" text-anchor="middle">Жгут оставить видимым; передать информацию медикам</text>
+<text class="m" x="550" y="730" text-anchor="middle">Дополнительная иллюстрация по лекциям 15.09/22.09. Спорные детали см. в checks/.</text>
+</svg>
