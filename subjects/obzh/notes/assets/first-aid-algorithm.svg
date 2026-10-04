@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 900">
+<style>text{font-family:Arial,sans-serif;fill:currentColor}.b{fill:none;stroke:currentColor;stroke-width:3;rx:16}.l{stroke:currentColor;stroke-width:3;fill:none}.t{font-size:28px;font-weight:700}.s{font-size:22px}.m{font-size:19px}</style>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L9 3L0 6z" fill="currentColor"/></marker></defs>
+<text class="t" x="500" y="45" text-anchor="middle">Алгоритм первой помощи по лекции 15.09</text>
+<rect class="b" x="310" y="75" width="380" height="70"/><text class="s" x="500" y="118" text-anchor="middle">1. Убедиться в безопасности</text>
+<path class="l" d="M500 145V190" marker-end="url(#a)"/><rect class="b" x="310" y="195" width="380" height="70"/><text class="s" x="500" y="238" text-anchor="middle">2. Проверить сознание</text>
+<path class="l" d="M500 265V310" marker-end="url(#a)"/><rect class="b" x="310" y="315" width="380" height="70"/><text class="s" x="500" y="358" text-anchor="middle">3. Позвать помощь / 112 или 103</text>
+<path class="l" d="M500 385V430" marker-end="url(#a)"/><rect class="b" x="310" y="435" width="380" height="85"/><text class="s" x="500" y="472" text-anchor="middle">4. Проверить дыхание</text><text class="m" x="500" y="500" text-anchor="middle">вижу — слышу — ощущаю, ≤ 10 секунд</text>
+<path class="l" d="M500 520V565"/><path class="l" d="M500 565H245V610" marker-end="url(#a)"/><path class="l" d="M500 565H755V610" marker-end="url(#a)"/>
+<text class="m" x="340" y="555" text-anchor="middle">дыхание есть</text><text class="m" x="665" y="555" text-anchor="middle">дыхания нет</text>
+<rect class="b" x="80" y="615" width="330" height="110"/><text class="s" x="245" y="655" text-anchor="middle">Устойчивое боковое положение</text><text class="m" x="245" y="690" text-anchor="middle">контроль дыхания, ждать помощь</text>
+<rect class="b" x="590" y="615" width="330" height="110"/><text class="s" x="755" y="655" text-anchor="middle">Начать СЛР</text><text class="m" x="755" y="690" text-anchor="middle">до помощи / признаков жизни</text>
+<text class="m" x="500" y="805" text-anchor="middle">Дополнительная иллюстрация по конспекту; не заменяет актуальный официальный алгоритм.</text>
+</svg>
