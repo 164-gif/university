@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "AGENTS.md",
+                "file": "subjects/obzh/RECOVERY_MANIFEST.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "AGENTS"
+              "title": "RECOVERY_MANIFEST"
             }
           }
         ]
@@ -190,7 +190,10 @@
   },
   "active": "315886941e1b5638",
   "lastOpenFiles": [
+    "subjects/obzh/README.md",
     "usethis.md",
+    "subjects/physics/notes/14 - Момент силы.md",
+    "AGENTS.md",
     "templates/there_might_be_a_mistake_template.md",
     "subjects/introduction_to_information_security/checks/There might be a mistake.md",
     "subjects/introduction_to_information_security/checks",
@@ -222,9 +225,6 @@
     "subjects/introduction_to_information_security/notes/assets/02-state-secret-access.svg",
     "subjects/introduction_to_information_security/notes/assets/02-legal-framework.svg",
     "subjects/introduction_to_information_security/notes/assets/01-parts-of-infosec.svg",
-    "subjects/introduction_to_information_security/transcripts/01 - Расшифровка 7484-7493.md",
-    "subjects/introduction_to_information_security/summaries/01 - Краткий конспект.md",
-    "subjects/introduction_to_information_security/raw/IMAGE_INDEX.md",
     "subjects/introduction_to_information_security/notes/assets",
     "subjects/introduction_to_information_security/transcripts",
     "subjects/introduction_to_information_security/summaries",
