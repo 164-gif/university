@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 420">
+<style>text{font-family:Arial,sans-serif;fill:currentColor}.b{fill:none;stroke:currentColor;stroke-width:3;rx:16}.l{stroke:currentColor;stroke-width:3;fill:none}.t{font-size:28px;font-weight:700}.s{font-size:23px}.m{font-size:18px}</style>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L9 3L0 6z" fill="currentColor"/></marker></defs>
+<text class="t" x="550" y="55" text-anchor="middle">Эпидемиологическая цепочка по лекции 22.09</text>
+<rect class="b" x="45" y="135" width="275" height="105"/><text class="s" x="182" y="180" text-anchor="middle">Источник инфекции</text><text class="m" x="182" y="215" text-anchor="middle">больной / животное / носитель</text>
+<path class="l" d="M320 188H405" marker-end="url(#a)"/><rect class="b" x="410" y="135" width="280" height="105"/><text class="s" x="550" y="180" text-anchor="middle">Механизм передачи</text>
+<path class="l" d="M690 188H775" marker-end="url(#a)"/><rect class="b" x="780" y="135" width="275" height="105"/><text class="s" x="917" y="180" text-anchor="middle">Восприимчивый</text><text class="s" x="917" y="212" text-anchor="middle">организм</text>
+<text class="m" x="550" y="325" text-anchor="middle">Формулировка лекции: разрыв одного звена прекращает распространение инфекции.</text>
+</svg>
