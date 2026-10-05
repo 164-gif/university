@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650">
+<style>text{font-family:Arial,sans-serif;fill:currentColor}.b{fill:none;stroke:currentColor;stroke-width:3}.t{font-size:31px;font-weight:700}.s{font-size:25px}.m{font-size:19px}.l{stroke:currentColor;stroke-width:3;fill:none}</style>
+<text class="t" x="450" y="50" text-anchor="middle">Три свойства информационной безопасности</text>
+<polygon class="b" points="450,110 130,500 770,500"/>
+<circle class="b" cx="450" cy="155" r="92"/><text class="s" x="450" y="148" text-anchor="middle">Конфиден-</text><text class="s" x="450" y="180" text-anchor="middle">циальность</text>
+<circle class="b" cx="210" cy="455" r="92"/><text class="s" x="210" y="463" text-anchor="middle">Целостность</text>
+<circle class="b" cx="690" cy="455" r="92"/><text class="s" x="690" y="463" text-anchor="middle">Доступность</text>
+<text class="m" x="450" y="605" text-anchor="middle">Дополнительная иллюстрация по определениям из лекции 1</text>
+</svg>
