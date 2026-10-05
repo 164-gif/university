@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760">
+<style>text{font-family:Arial,sans-serif;fill:currentColor}.b{fill:none;stroke:currentColor;stroke-width:3;rx:16}.t{font-size:31px;font-weight:700}.s{font-size:22px}.m{font-size:18px}.l{stroke:currentColor;stroke-width:3;fill:none}</style>
+<text class="t" x="600" y="45" text-anchor="middle">Принципы построения системы информационной безопасности</text>
+<rect class="b" x="430" y="85" width="340" height="70"/><text class="s" x="600" y="128" text-anchor="middle">Система информационной безопасности</text>
+<path class="l" d="M600 155V205M600 205H190V245M600 205H400V245M600 205V245M600 205H800V245M600 205H1010V245"/>
+<rect class="b" x="80" y="245" width="220" height="65"/><text class="s" x="190" y="285" text-anchor="middle">Законность</text>
+<rect class="b" x="290" y="245" width="220" height="65"/><text class="s" x="400" y="285" text-anchor="middle">Системность</text>
+<rect class="b" x="490" y="245" width="220" height="65"/><text class="s" x="600" y="285" text-anchor="middle">Комплексность</text>
+<rect class="b" x="690" y="245" width="220" height="65"/><text class="s" x="800" y="285" text-anchor="middle">Непрерывность</text>
+<rect class="b" x="900" y="245" width="220" height="65"/><text class="s" x="1010" y="285" text-anchor="middle">Своевременность</text>
+<rect class="b" x="80" y="375" width="300" height="72"/><text class="s" x="230" y="405" text-anchor="middle">Непрерывность</text><text class="s" x="230" y="432" text-anchor="middle">совершенствования</text>
+<rect class="b" x="450" y="375" width="300" height="72"/><text class="s" x="600" y="405" text-anchor="middle">Разумная достаточность</text><text class="m" x="600" y="432" text-anchor="middle">экономическая целесообразность</text>
+<rect class="b" x="820" y="375" width="300" height="72"/><text class="s" x="970" y="405" text-anchor="middle">Персональная</text><text class="s" x="970" y="432" text-anchor="middle">ответственность</text>
+<rect class="b" x="80" y="510" width="300" height="72"/><text class="s" x="230" y="552" text-anchor="middle">Минимизация полномочий</text>
+<rect class="b" x="450" y="510" width="300" height="72"/><text class="s" x="600" y="540" text-anchor="middle">Усиление самого</text><text class="s" x="600" y="568" text-anchor="middle">слабого звена</text>
+<rect class="b" x="820" y="510" width="300" height="72"/><text class="s" x="970" y="552" text-anchor="middle">Обязательность контроля</text>
+<text class="m" x="600" y="690" text-anchor="middle">Дополнительная схема по перечню принципов из лекции 2</text>
+</svg>
