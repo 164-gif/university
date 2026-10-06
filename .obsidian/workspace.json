@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "subjects/analytical_geometry/notes/05 - Скалярное произведение.md",
+                "file": "subjects/analytical_geometry/notes/02 - Линейные операции над векторами.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "05 - Скалярное произведение"
+              "title": "02 - Линейные операции над векторами"
             }
           }
         ]
@@ -190,6 +190,11 @@
   },
   "active": "315886941e1b5638",
   "lastOpenFiles": [
+    "subjects/analytical_geometry/notes/01 - Вектор и системы координат.md",
+    "subjects/analytical_geometry/notes/12 - Гипербола.md",
+    "subjects/analytical_geometry/notes/11 - Окружность и эллипс.md",
+    "subjects/analytical_geometry/notes/03 - Коллинеарность и компланарность.md",
+    "subjects/analytical_geometry/notes/05 - Скалярное произведение.md",
     "subjects/obzh/raw/SOURCE_INDEX.md",
     "subjects/obzh/raw",
     "subjects/obzh/notes/assets/first-aid-algorithm.svg",
@@ -199,8 +204,6 @@
     "subjects/obzh/notes/00 - ОБЖ и БЖД.md",
     "subjects/obzh/exam/QUESTIONS.md",
     "subjects/obzh/exam",
-    "subjects/analytical_geometry/notes/03 - Коллинеарность и компланарность.md",
-    "subjects/analytical_geometry/notes/01 - Вектор и системы координат.md",
     "subjects/obzh/checks/There might be a mistake.md",
     "subjects/physics/notes/03 - Ускорение и классификация движения.md",
     "subjects/physics/notes/00 - Физика.md",
@@ -222,9 +225,6 @@
     "subjects/obzh/checks",
     "subjects/obzh/README.md",
     "usethis.md",
-    "subjects/physics/notes/14 - Момент силы.md",
-    "AGENTS.md",
-    "templates/there_might_be_a_mistake_template.md",
     "subjects/introduction_to_information_security/checks",
     "subjects/physics/notes/assets/14-torque.svg",
     "subjects/physics/notes/assets/13-rolling-sphere.svg",
