@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#f7f8fb" />
+  <title>University Notes</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="menuBtn" class="icon-btn mobile-only" aria-label="Открыть навигацию">☰</button>
+    <a class="brand" href="#/">University Notes</a>
+    <div class="top-actions">
+      <button id="searchBtn" class="icon-btn" aria-label="Поиск">⌕</button>
+      <button id="themeBtn" class="icon-btn" aria-label="Сменить тему">◐</button>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar" aria-label="Навигация">
+      <div class="sidebar-head">
+        <div class="sidebar-title">Предметы</div>
+        <button id="closeSidebar" class="icon-btn mobile-only" aria-label="Закрыть">×</button>
+      </div>
+      <nav id="navigation" class="navigation"></nav>
+    </aside>
+
+    <main class="main">
+      <div id="breadcrumbs" class="breadcrumbs"></div>
+      <div class="content-grid">
+        <article id="content" class="article" aria-live="polite"></article>
+        <aside id="toc" class="toc" aria-label="Оглавление"></aside>
+      </div>
+    </main>
+  </div>
+
+  <div id="overlay" class="overlay"></div>
+
+  <dialog id="searchDialog" class="search-dialog">
+    <form method="dialog" class="search-head">
+      <input id="searchInput" type="search" placeholder="Поиск по конспектам…" autocomplete="off" autofocus />
+      <button class="icon-btn" value="cancel" aria-label="Закрыть">×</button>
+    </form>
+    <div id="searchResults" class="search-results"></div>
+    <div class="search-hint">Enter — открыть · Esc — закрыть</div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    window.__mermaid = mermaid;
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
