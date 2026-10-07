@@ -44,7 +44,8 @@
     if (SUBJECT_NAMES[key]) return SUBJECT_NAMES[key];
     return key.replaceAll("_", " ").replace(/\b\w/g, (m) => m.toUpperCase());
   }
-
+  function cohortById(id) { return (manifest?.cohorts || []).find((c) => c.id === id); }
+  function cohortName(id) { return cohortById(id)?.title || id; }
   function sectionName(key) { return SECTION_NAMES[key] || key.replaceAll("_", " "); }
   function stem(path) { return path.split("/").pop().replace(/\.(md|txt)$/i, ""); }
   function dirname(path) { return path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : ""; }
@@ -57,8 +58,14 @@
     }
     return out.join("/");
   }
+  function subjectRootPath(currentPath) {
+    const parts = normalizePath(currentPath).split("/");
+    if (parts[0] === "cohorts" && parts[2] === "subjects" && parts.length >= 4) return parts.slice(0, 4).join("/");
+    if (parts[0] === "subjects" && parts.length >= 2) return parts.slice(0, 2).join("/");
+    return dirname(currentPath);
+  }
   function relativePath(currentPath, target) {
-    if (target.startsWith("subjects/") || target === "README.md") return normalizePath(target);
+    if (target.startsWith("subjects/") || target.startsWith("cohorts/") || target === "README.md") return normalizePath(target);
     return normalizePath(`${dirname(currentPath)}/${target}`);
   }
   function escapeHtml(value) {
@@ -71,6 +78,7 @@
   function docHref(path, heading = "") {
     return `#/doc/${encodeURIComponent(path)}${heading ? `?h=${encodeURIComponent(heading)}` : ""}`;
   }
+  function cohortHref(id) { return `#/cohort/${encodeURIComponent(id)}`; }
 
   function buildIndexes() {
     docsByPath = new Map(docs.map((d) => [normalizePath(d.path), d]));
@@ -98,12 +106,15 @@
     if (raw.startsWith("./") || raw.startsWith("../") || raw.includes("/")) {
       for (const p of withExt(relativePath(currentPath, raw))) candidates.push(p);
       for (const p of withExt(normalizePath(raw))) candidates.push(p);
-      const subjectRoot = currentPath.split("/").slice(0, 2).join("/");
-      for (const p of withExt(normalizePath(`${subjectRoot}/${raw}`))) candidates.push(p);
+      for (const p of withExt(normalizePath(`${subjectRootPath(currentPath)}/${raw}`))) candidates.push(p);
     }
     for (const p of candidates) if (docsByPath.has(p)) return { path: p, heading };
     const byBase = basenameIndex.get(raw.toLowerCase());
-    if (byBase?.length) return { path: byBase[0], heading };
+    if (byBase?.length) {
+      const current = docsByPath.get(normalizePath(currentPath));
+      const sameCohort = current ? byBase.find((p) => docsByPath.get(p)?.cohort === current.cohort) : null;
+      return { path: sameCohort || byBase[0], heading };
+    }
     const byTitle = titleIndex.get(raw.toLowerCase());
     if (byTitle) return { path: byTitle, heading };
     return null;
@@ -111,9 +122,7 @@
 
   function resolveAsset(target, currentPath) {
     const clean = target.split("#")[0].trim();
-    const candidates = [relativePath(currentPath, clean), normalizePath(clean)];
-    const subjectRoot = currentPath.split("/").slice(0, 2).join("/");
-    candidates.push(normalizePath(`${subjectRoot}/${clean}`));
+    const candidates = [relativePath(currentPath, clean), normalizePath(clean), normalizePath(`${subjectRootPath(currentPath)}/${clean}`)];
     for (const p of candidates) if (assetSet.has(p)) return p;
     const wanted = clean.split("/").pop().toLowerCase();
     const found = manifest.assets.find((p) => p.split("/").pop().toLowerCase() === wanted);
@@ -254,6 +263,9 @@
 
   function currentRoute() {
     const hash = location.hash || "#/";
+    if (hash.startsWith("#/cohort/")) {
+      try { return { type:"cohort", cohort: decodeURIComponent(hash.slice(10)) }; } catch { return { type:"home" }; }
+    }
     if (!hash.startsWith("#/doc/")) return { type:"home" };
     const rest = hash.slice(6);
     const [encoded, query = ""] = rest.split("?", 2);
@@ -262,9 +274,16 @@
     catch { return { type:"home" }; }
   }
 
-  function renderBreadcrumbs(doc) {
-    if (!doc) { crumbsEl.innerHTML = ""; return; }
-    crumbsEl.innerHTML = `<a href="#/">Главная</a> <span>›</span> <span>${escapeHtml(subjectName(doc.subject))}</span> <span>›</span> <span>${escapeHtml(sectionName(doc.section))}</span>`;
+  function renderBreadcrumbs(doc, cohort = null) {
+    if (doc) {
+      crumbsEl.innerHTML = `<a href="#/">Главная</a> <span>›</span> <a href="${cohortHref(doc.cohort)}">${escapeHtml(cohortName(doc.cohort))}</a> <span>›</span> <span>${escapeHtml(subjectName(doc.subject))}</span> <span>›</span> <span>${escapeHtml(sectionName(doc.section))}</span>`;
+      return;
+    }
+    if (cohort) {
+      crumbsEl.innerHTML = `<a href="#/">Главная</a> <span>›</span> <span>${escapeHtml(cohortName(cohort))}</span>`;
+      return;
+    }
+    crumbsEl.innerHTML = "";
   }
 
   function subjectEntry(subjectDocs) {
@@ -273,9 +292,24 @@
 
   function renderHome() {
     renderBreadcrumbs(null); tocEl.innerHTML = "";
-    const groups = Object.groupBy ? Object.groupBy(docs.filter((d) => d.subject !== "repository"), (d) => d.subject) : docs.filter((d) => d.subject !== "repository").reduce((a,d)=>((a[d.subject]??=[]).push(d),a),{});
+    const cohorts = manifest.cohorts || [];
+    contentEl.innerHTML = `<div class="home-hero"><h1>University Notes</h1><div class="home-subtitle">Выбери набор материалов по году поступления и курсу.</div><div class="stats"><div class="stat">${manifest.stats.documents} документов</div><div class="stat">${cohorts.length} набора</div><div class="stat">светлая / тёмная тема</div></div></div><div class="subject-grid">${cohorts.map((c) => `<a class="subject-card" href="${cohortHref(c.id)}"><div class="subject-card-title">${escapeHtml(c.title)}</div><div class="subject-card-meta">${c.documents ? `${c.documents} материалов` : "Пока пусто"} · ${escapeHtml(c.description || "")}</div></a>`).join("")}</div>`;
+    updateActiveNav();
+  }
+
+  function renderCohort(cohortId) {
+    const cohort = cohortById(cohortId);
+    if (!cohort) { renderHome(); return; }
+    renderBreadcrumbs(null, cohortId); tocEl.innerHTML = "";
+    const cohortDocs = docs.filter((d) => d.cohort === cohortId && d.subject !== "repository");
+    const groups = cohortDocs.reduce((a,d)=>((a[d.subject]??=[]).push(d),a),{});
     const subjects = Object.entries(groups).sort((a,b) => subjectName(a[0]).localeCompare(subjectName(b[0]), "ru"));
-    contentEl.innerHTML = `<div class="home-hero"><h1>University Notes</h1><div class="home-subtitle">Все конспекты из репозитория в браузере: формулы LaTeX, Obsidian-ссылки, схемы, таблицы и исходные материалы.</div><div class="stats"><div class="stat">${manifest.stats.documents} документов</div><div class="stat">${subjects.length} предметов</div><div class="stat">светлая / тёмная тема</div></div></div><div class="subject-grid">${subjects.map(([key, list]) => { const entry = subjectEntry(list); return `<a class="subject-card" href="${docHref(entry.path)}"><div class="subject-card-title">${escapeHtml(subjectName(key))}</div><div class="subject-card-meta">${list.length} материалов · ${new Set(list.map(d=>d.section)).size} разделов</div></a>`; }).join("")}</div>`;
+    if (!subjects.length) {
+      contentEl.innerHTML = `<div class="home-hero"><h1>${escapeHtml(cohort.title)}</h1><div class="home-subtitle">Для этого курса материалы пока не добавлены.</div></div><div class="empty">Пустой раздел</div>`;
+      updateActiveNav();
+      return;
+    }
+    contentEl.innerHTML = `<div class="home-hero"><h1>${escapeHtml(cohort.title)}</h1><div class="home-subtitle">${escapeHtml(cohort.description || "")}</div><div class="stats"><div class="stat">${cohortDocs.length} материалов</div><div class="stat">${subjects.length} предметов</div></div></div><div class="subject-grid">${subjects.map(([key, list]) => { const entry = subjectEntry(list); return `<a class="subject-card" href="${docHref(entry.path)}"><div class="subject-card-title">${escapeHtml(subjectName(key))}</div><div class="subject-card-meta">${list.length} материалов · ${new Set(list.map(d=>d.section)).size} разделов</div></a>`; }).join("")}</div>`;
     updateActiveNav();
   }
 
@@ -295,26 +329,39 @@
   }
 
   function renderNavigation() {
-    const subjectDocs = docs.filter((d) => d.subject !== "repository");
-    const groups = subjectDocs.reduce((acc, d) => ((acc[d.subject] ??= []).push(d), acc), {});
-    navEl.innerHTML = Object.keys(groups).sort((a,b)=>subjectName(a).localeCompare(subjectName(b),"ru")).map((subject) => {
-      const sections = groups[subject].reduce((acc,d)=>((acc[d.section]??=[]).push(d),acc),{});
-      const ordered = Object.keys(sections).sort((a,b) => {
-        const ai=SECTION_ORDER.indexOf(a), bi=SECTION_ORDER.indexOf(b);
-        return (ai<0?99:ai)-(bi<0?99:bi) || a.localeCompare(b);
-      });
-      return `<details data-subject="${escapeAttr(subject)}"><summary>${escapeHtml(subjectName(subject))}</summary>${ordered.map((section)=>`<div class="nav-section"><div class="nav-section-title">${escapeHtml(sectionName(section))}</div>${sections[section].sort((a,b)=>a.title.localeCompare(b.title,"ru",{numeric:true})).map((d)=>`<a class="nav-link" data-path="${escapeAttr(d.path)}" href="${docHref(d.path)}">${escapeHtml(d.title)}</a>`).join("")}</div>`).join("")}</details>`;
+    const cohorts = manifest.cohorts || [];
+    navEl.innerHTML = cohorts.map((cohort) => {
+      const cohortDocs = docs.filter((d) => d.cohort === cohort.id && d.subject !== "repository");
+      if (!cohortDocs.length) {
+        return `<details data-cohort="${escapeAttr(cohort.id)}"><summary>${escapeHtml(cohort.title)}</summary><div class="nav-section"><a class="nav-link" href="${cohortHref(cohort.id)}">Пока пусто</a></div></details>`;
+      }
+      const groups = cohortDocs.reduce((acc, d) => ((acc[d.subject] ??= []).push(d), acc), {});
+      const subjectsHtml = Object.keys(groups).sort((a,b)=>subjectName(a).localeCompare(subjectName(b),"ru")).map((subject) => {
+        const sections = groups[subject].reduce((acc,d)=>((acc[d.section]??=[]).push(d),acc),{});
+        const ordered = Object.keys(sections).sort((a,b) => {
+          const ai=SECTION_ORDER.indexOf(a), bi=SECTION_ORDER.indexOf(b);
+          return (ai<0?99:ai)-(bi<0?99:bi) || a.localeCompare(b);
+        });
+        return `<details data-subject="${escapeAttr(subject)}"><summary>${escapeHtml(subjectName(subject))}</summary>${ordered.map((section)=>`<div class="nav-section"><div class="nav-section-title">${escapeHtml(sectionName(section))}</div>${sections[section].sort((a,b)=>a.title.localeCompare(b.title,"ru",{numeric:true})).map((d)=>`<a class="nav-link" data-path="${escapeAttr(d.path)}" href="${docHref(d.path)}">${escapeHtml(d.title)}</a>`).join("")}</div>`).join("")}</details>`;
+      }).join("");
+      return `<details class="cohort-nav" data-cohort="${escapeAttr(cohort.id)}"><summary>${escapeHtml(cohort.title)}</summary><div class="nav-section"><a class="nav-link" href="${cohortHref(cohort.id)}">Обзор курса</a>${subjectsHtml}</div></details>`;
     }).join("");
   }
 
   function updateActiveNav() {
     const route = currentRoute();
-    navEl.querySelectorAll(".nav-link").forEach((a) => a.classList.toggle("active", route.type === "doc" && a.dataset.path === route.path));
+    navEl.querySelectorAll(".nav-link[data-path]").forEach((a) => a.classList.toggle("active", route.type === "doc" && a.dataset.path === route.path));
+    if (route.type === "cohort") {
+      const details = navEl.querySelector(`details[data-cohort="${CSS.escape(route.cohort)}"]`);
+      if (details) details.open = true;
+    }
     if (route.type === "doc") {
       const doc = docsByPath.get(route.path);
       if (doc) {
-        const details = navEl.querySelector(`details[data-subject="${CSS.escape(doc.subject)}"]`);
-        if (details) details.open = true;
+        const cohortDetails = navEl.querySelector(`details[data-cohort="${CSS.escape(doc.cohort)}"]`);
+        if (cohortDetails) cohortDetails.open = true;
+        const subjectDetails = cohortDetails?.querySelector(`details[data-subject="${CSS.escape(doc.subject)}"]`);
+        if (subjectDetails) subjectDetails.open = true;
       }
     }
   }
@@ -326,10 +373,11 @@
   }
   function searchDocs(query) {
     const q = query.trim().toLowerCase();
-    if (!q) return docs.filter((d)=>d.subject!=="repository").slice(0,18);
+    const studyDocs = docs.filter((d)=>d.subject!=="repository");
+    if (!q) return studyDocs.slice(0,18);
     const terms = q.split(/\s+/).filter(Boolean);
-    return docs.map((d) => {
-      const hayTitle = `${d.title} ${subjectName(d.subject)} ${sectionName(d.section)}`.toLowerCase();
+    return studyDocs.map((d) => {
+      const hayTitle = `${d.title} ${cohortName(d.cohort)} ${subjectName(d.subject)} ${sectionName(d.section)}`.toLowerCase();
       const hay = `${hayTitle}\n${d.content}`.toLowerCase();
       if (!terms.every((t)=>hay.includes(t))) return null;
       let score = terms.reduce((s,t)=>s+(hayTitle.includes(t)?20:1),0);
@@ -340,7 +388,7 @@
   function renderSearch(query) {
     const found = searchDocs(query);
     searchSelection = Math.min(searchSelection, Math.max(0, found.length - 1));
-    searchResults.innerHTML = found.length ? found.map((d,i)=>`<a class="search-item ${i===searchSelection?"selected":""}" data-index="${i}" href="${docHref(d.path)}"><div class="search-item-title">${escapeHtml(d.title)}</div><div class="search-item-path">${escapeHtml(subjectName(d.subject))} · ${escapeHtml(sectionName(d.section))}</div></a>`).join("") : `<div class="empty">Ничего не найдено</div>`;
+    searchResults.innerHTML = found.length ? found.map((d,i)=>`<a class="search-item ${i===searchSelection?"selected":""}" data-index="${i}" href="${docHref(d.path)}"><div class="search-item-title">${escapeHtml(d.title)}</div><div class="search-item-path">${escapeHtml(cohortName(d.cohort))} · ${escapeHtml(subjectName(d.subject))} · ${escapeHtml(sectionName(d.section))}</div></a>`).join("") : `<div class="empty">Ничего не найдено</div>`;
     searchResults.querySelectorAll("a").forEach((a)=>a.addEventListener("click",()=>searchDialog.close()));
   }
 
@@ -359,7 +407,9 @@
 
   async function route() {
     const r = currentRoute();
-    if (r.type === "doc") await renderDoc(r.path, r.heading); else renderHome();
+    if (r.type === "doc") await renderDoc(r.path, r.heading);
+    else if (r.type === "cohort") renderCohort(r.cohort);
+    else renderHome();
   }
 
   async function init() {
