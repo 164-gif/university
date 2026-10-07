@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "subjects/**"
+      - "cohorts/**"
       - "web/**"
       - "README.md"
       - ".github/workflows/pages.yml"
