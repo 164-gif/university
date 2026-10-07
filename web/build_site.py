@@ -17,6 +17,13 @@ ASSET_EXTS = {
 }
 SKIP_PARTS = {".git", ".github", ".obsidian", "_site", "web", "templates"}
 
+DEFAULT_COHORT = "ib-2026-1kurs"
+COHORTS = [
+    {"id": "ib-2026-1kurs", "title": "ИБ-2026 — 1 курс", "description": "Текущие материалы репозитория"},
+    {"id": "ib-2025-1kurs", "title": "ИБ-2025 — 1 курс", "description": "Пока материалов нет"},
+    {"id": "ib-2026-2kurs", "title": "ИБ-2026 — 2 курс", "description": "Пока материалов нет"},
+]
+
 
 def strip_frontmatter(text: str) -> tuple[str, dict[str, str]]:
     if not text.startswith("---\n"):
@@ -44,10 +51,21 @@ def title_for(path: Path, text: str, meta: dict[str, str]) -> str:
     return path.stem
 
 
+def cohort_for(rel: Path) -> str:
+    parts = rel.parts
+    if len(parts) >= 2 and parts[0] == "cohorts":
+        return parts[1]
+    if parts and parts[0] == "subjects":
+        return DEFAULT_COHORT
+    return "repository"
+
+
 def subject_for(rel: Path) -> str:
     parts = rel.parts
     if len(parts) >= 2 and parts[0] == "subjects":
         return parts[1]
+    if len(parts) >= 4 and parts[0] == "cohorts" and parts[2] == "subjects":
+        return parts[3]
     return "repository"
 
 
@@ -55,6 +73,8 @@ def section_for(rel: Path) -> str:
     parts = rel.parts
     if len(parts) >= 3 and parts[0] == "subjects":
         return parts[2]
+    if len(parts) >= 5 and parts[0] == "cohorts" and parts[2] == "subjects":
+        return parts[4]
     return "root"
 
 
@@ -81,8 +101,9 @@ def main() -> None:
     docs = []
     assets = []
 
-    # Public study content. Repository-internal agent instructions stay out of the site.
-    roots = [ROOT / "subjects"]
+    # Existing subjects belong to IB-2026 / 1 course. New cohorts can store
+    # their own content under cohorts/<cohort>/subjects/<subject>/...
+    roots = [ROOT / "subjects", ROOT / "cohorts"]
     if (ROOT / "README.md").exists():
         roots.append(ROOT / "README.md")
 
@@ -109,6 +130,7 @@ def main() -> None:
                 {
                     "path": rel.as_posix(),
                     "title": title_for(path, text, meta),
+                    "cohort": cohort_for(rel),
                     "subject": subject_for(rel),
                     "section": section_for(rel),
                     "ext": suffix[1:],
@@ -120,19 +142,27 @@ def main() -> None:
             copy_asset(path)
             assets.append(rel.as_posix())
 
+    cohort_counts = {c["id"]: 0 for c in COHORTS}
+    for doc in docs:
+        if doc["cohort"] in cohort_counts:
+            cohort_counts[doc["cohort"]] += 1
+
+    cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 1,
+        "version": 2,
         "repository": "164-gif/university",
+        "defaultCohort": DEFAULT_COHORT,
+        "cohorts": cohorts,
         "docs": docs,
         "assets": assets,
-        "stats": {"documents": len(docs), "assets": len(assets)},
+        "stats": {"documents": len(docs), "assets": len(assets), "cohorts": len(cohorts)},
     }
     (OUT / "content.json").write_text(
         json.dumps(manifest, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
     )
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
-    print(f"Built {len(docs)} documents and {len(assets)} assets into {OUT}")
+    print(f"Built {len(docs)} documents, {len(assets)} assets and {len(cohorts)} cohorts into {OUT}")
 
 
 if __name__ == "__main__":
