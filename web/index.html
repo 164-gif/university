@@ -66,5 +66,26 @@
   <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script defer>window.__mermaid = window.mermaid;</script>
   <script defer src="app.js"></script>
+  <script defer>
+    (() => {
+      const normalizeCohortHash = () => {
+        const prefix = "#/cohort/";
+        if (location.hash.startsWith(prefix) && !location.hash.startsWith(prefix + "/")) {
+          const id = location.hash.slice(prefix.length);
+          if (id) location.replace(prefix + "/" + id);
+        }
+      };
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest('a[href^="#/cohort/"]');
+        if (!link) return;
+        const href = link.getAttribute("href");
+        if (!href || href.startsWith("#/cohort//")) return;
+        event.preventDefault();
+        location.hash = "#/cohort//" + href.slice("#/cohort/".length);
+      });
+      addEventListener("hashchange", normalizeCohortHash);
+      normalizeCohortHash();
+    })();
+  </script>
 </body>
 </html>
