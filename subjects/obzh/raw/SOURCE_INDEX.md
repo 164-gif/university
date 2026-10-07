@@ -55,6 +55,7 @@
 
 Производные материалы:
 - `../summaries/2026-10-06_civil_defense_quick_review.md`;
+- `../concepts/2026-10-06_civil_defense_terms.md`;
 - `../exam/2026-10-06_civil_defense_LIKELY_TEST.md`;
 - проверка спорных мест добавлена в `../checks/There might be a mistake.md`.
 
