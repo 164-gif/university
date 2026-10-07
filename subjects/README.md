@@ -12,6 +12,8 @@ subjects/<subject>/
 ├── concepts/
 └── exam/
 ```
+## Репозиторий проекта
+https://github.com/164-gif/university - каждый может внести свой вклад
 
 ## README предмета
 
