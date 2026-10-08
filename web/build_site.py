@@ -95,7 +95,15 @@ def main() -> None:
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
 
-    for name in ("index.html", "styles.css", "app.js", "numbering.js", "subject-labels.js"):
+    for name in (
+        "index.html",
+        "styles.css",
+        "enhancements.css",
+        "app.js",
+        "numbering.js",
+        "subject-labels.js",
+        "navigation-search.js",
+    ):
         shutil.copy2(WEB / name, OUT / name)
 
     docs = []
