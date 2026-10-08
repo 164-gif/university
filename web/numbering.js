@@ -14,9 +14,8 @@
     if (!links.length) return;
 
     links.sort((a, b) => fileKey(a).localeCompare(fileKey(b), "ru", { numeric: true, sensitivity: "base" }));
-    for (const link of links) section.appendChild(link);
-
     links.forEach((link, index) => {
+      section.appendChild(link);
       if (!link.dataset.originalTitle) link.dataset.originalTitle = stripPrefix(link.textContent || "");
       link.textContent = `${String(index + 1).padStart(2, "0")} — ${link.dataset.originalTitle}`;
     });
@@ -26,8 +25,14 @@
     nav.querySelectorAll(".nav-section").forEach(normalizeSection);
   }
 
-  const observer = new MutationObserver(() => normalizeNavigation());
-  observer.observe(nav, { childList: true, subtree: true });
-  addEventListener("hashchange", () => queueMicrotask(normalizeNavigation));
-  queueMicrotask(normalizeNavigation);
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    if (nav.querySelector("a.nav-link[data-path]")) {
+      normalizeNavigation();
+      clearInterval(timer);
+    } else if (tries >= 50) {
+      clearInterval(timer);
+    }
+  }, 100);
 })();
