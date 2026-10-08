@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="enhancements.css" />
 </head>
 <body>
   <header class="topbar">
@@ -60,11 +61,11 @@
 
   <dialog id="searchDialog" class="search-dialog">
     <form method="dialog" class="search-head">
-      <input id="searchInput" type="search" placeholder="Поиск по конспектам…" autocomplete="off" autofocus />
+      <input id="searchInput" type="search" placeholder="Поиск по темам, предметам и тексту…" autocomplete="off" autofocus />
       <button class="icon-btn" value="cancel" aria-label="Закрыть">×</button>
     </form>
     <div id="searchResults" class="search-results"></div>
-    <div class="search-hint">Enter — открыть · Esc — закрыть</div>
+    <div class="search-hint">↑↓ — выбрать · Enter — открыть · Esc — закрыть · / или Ctrl+K — поиск</div>
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
@@ -75,6 +76,7 @@
   <script defer src="app.js"></script>
   <script defer src="numbering.js"></script>
   <script defer src="subject-labels.js"></script>
+  <script defer src="navigation-search.js"></script>
   <script defer>
     (() => {
       const normalizeCohortHash = () => {
