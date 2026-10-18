@@ -101,6 +101,7 @@ def main() -> None:
         "enhancements.css",
         "app.js",
         "geometry-quiz.js",
+        "geometry-quiz-bootstrap.js",
         "numbering.js",
         "subject-labels.js",
         "navigation-search.js",
