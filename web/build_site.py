@@ -100,6 +100,7 @@ def main() -> None:
         "styles.css",
         "enhancements.css",
         "app.js",
+        "geometry-quiz.js",
         "numbering.js",
         "subject-labels.js",
         "navigation-search.js",
