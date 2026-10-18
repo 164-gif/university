@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <style>.t{font-family:Arial,sans-serif;fill:#111827}.h{font-size:34px;font-weight:700}.s{font-size:22px}.axis{stroke:#334155;stroke-width:3}.curve{stroke:#7c3aed;stroke-width:5;fill:none}.asym{stroke:#94a3b8;stroke-width:2;stroke-dasharray:10 10}.dir{stroke:#dc2626;stroke-width:4;stroke-dasharray:12 10}.focus{fill:#111827}.pt{fill:#16a34a}.seg{stroke:#16a34a;stroke-width:3}.guide{stroke:#64748b;stroke-width:2;stroke-dasharray:8 8}</style>
+  <text class="t h" x="600" y="50" text-anchor="middle">Гипербола и её директрисы</text>
+  <line class="axis" x1="100" y1="350" x2="1100" y2="350"/><line class="axis" x1="600" y1="90" x2="600" y2="620"/>
+  <line class="asym" x1="180" y1="600" x2="1020" y2="100"/><line class="asym" x1="180" y1="100" x2="1020" y2="600"/>
+  <path class="curve" d="M750 350 C790 260 860 190 1040 130"/><path class="curve" d="M750 350 C790 440 860 510 1040 570"/>
+  <path class="curve" d="M450 350 C410 260 340 190 160 130"/><path class="curve" d="M450 350 C410 440 340 510 160 570"/>
+  <line class="dir" x1="485" y1="95" x2="485" y2="615"/><line class="dir" x1="715" y1="95" x2="715" y2="615"/>
+  <circle class="focus" cx="370" cy="350" r="8"/><circle class="focus" cx="830" cy="350" r="8"/>
+  <circle class="pt" cx="900" cy="205" r="9"/>
+  <line class="seg" x1="900" y1="205" x2="830" y2="350"/><line class="guide" x1="715" y1="205" x2="900" y2="205"/>
+  <text class="t s" x="320" y="385">F₁(−c,0)</text><text class="t s" x="840" y="385">F₂(c,0)</text><text class="t s" x="915" y="195">M</text>
+  <text class="t s" x="350" y="130">x = −a/ε</text><text class="t s" x="725" y="130">x = a/ε</text>
+  <text class="t s" x="865" y="285">r₂</text><text class="t s" x="795" y="195">d₂</text>
+  <text class="t s" x="600" y="660" text-anchor="middle">Для гиперболы ε &gt; 1, поэтому директрисы лежат между центром и вершинами: a/ε &lt; a.</text>
+</svg>
