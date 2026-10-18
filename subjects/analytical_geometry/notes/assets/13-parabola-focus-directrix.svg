@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <style>.t{font-family:Arial,sans-serif;fill:#111827}.h{font-size:34px;font-weight:700}.s{font-size:22px}.axis{stroke:#334155;stroke-width:3}.curve{stroke:#0f766e;stroke-width:5;fill:none}.dir{stroke:#dc2626;stroke-width:4;stroke-dasharray:12 10}.focus{fill:#111827}.pt{fill:#16a34a}.seg{stroke:#16a34a;stroke-width:3}.guide{stroke:#64748b;stroke-width:2;stroke-dasharray:8 8}</style>
+  <text class="t h" x="600" y="50" text-anchor="middle">Парабола: фокус и директриса</text>
+  <line class="axis" x1="120" y1="350" x2="1080" y2="350"/><line class="axis" x1="430" y1="90" x2="430" y2="620"/>
+  <line class="dir" x1="300" y1="90" x2="300" y2="620"/>
+  <path class="curve" d="M430 350 C520 220 680 160 960 130"/><path class="curve" d="M430 350 C520 480 680 540 960 570"/>
+  <circle class="focus" cx="560" cy="350" r="9"/><circle class="pt" cx="720" cy="215" r="9"/>
+  <line class="seg" x1="720" y1="215" x2="560" y2="350"/><line class="guide" x1="300" y1="215" x2="720" y2="215"/>
+  <text class="t s" x="570" y="385">F(p/2,0)</text><text class="t s" x="735" y="205">M(x,y)</text><text class="t s" x="155" y="125">директриса x = −p/2</text>
+  <text class="t s" x="630" y="275">MF</text><text class="t s" x="500" y="205">d(M, директриса)</text>
+  <text class="t s" x="455" y="385">O</text>
+  <text class="t s" x="600" y="655" text-anchor="middle">По определению параболы: MF = d(M, директриса). Отсюда каноническое уравнение y² = 2px, p &gt; 0.</text>
+</svg>
