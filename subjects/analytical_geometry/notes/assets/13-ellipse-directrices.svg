@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <style>.t{font-family:Arial,sans-serif;fill:#111827}.h{font-size:34px;font-weight:700}.s{font-size:22px}.axis{stroke:#334155;stroke-width:3}.curve{stroke:#2563eb;stroke-width:5;fill:none}.dir{stroke:#dc2626;stroke-width:4;stroke-dasharray:12 10}.focus{fill:#111827}.pt{fill:#16a34a}.seg{stroke:#16a34a;stroke-width:3}.guide{stroke:#64748b;stroke-width:2;stroke-dasharray:8 8}</style>
+  <text class="t h" x="600" y="50" text-anchor="middle">Эллипс, фокусы и директрисы</text>
+  <line class="axis" x1="120" y1="350" x2="1080" y2="350"/><line class="axis" x1="600" y1="100" x2="600" y2="610"/>
+  <ellipse class="curve" cx="600" cy="350" rx="300" ry="180"/>
+  <line class="dir" x1="220" y1="100" x2="220" y2="610"/><line class="dir" x1="980" y1="100" x2="980" y2="610"/>
+  <circle class="focus" cx="420" cy="350" r="8"/><circle class="focus" cx="780" cy="350" r="8"/>
+  <circle class="pt" cx="800" cy="216" r="9"/>
+  <line class="seg" x1="800" y1="216" x2="780" y2="350"/><line class="guide" x1="800" y1="216" x2="980" y2="216"/>
+  <text class="t s" x="390" y="385">F₁(−c,0)</text><text class="t s" x="790" y="385">F₂(c,0)</text><text class="t s" x="815" y="205">M(x,y)</text>
+  <text class="t s" x="130" y="135">x = −a/ε</text><text class="t s" x="990" y="135">x = a/ε</text>
+  <text class="t s" x="815" y="290">r₂</text><text class="t s" x="875" y="205">d₂</text>
+  <text class="t s" x="600" y="660" text-anchor="middle">Для любой точки эллипса отношение расстояния до фокуса к расстоянию до соответствующей директрисы равно ε, где 0 &lt; ε &lt; 1.</text>
+</svg>
