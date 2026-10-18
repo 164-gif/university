@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650">
+<rect width="1200" height="650" fill="#fff"/>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#334155"/></marker></defs>
+<style>.t{font-family:Arial,sans-serif;fill:#111827}.h{font-size:30px;font-weight:700}.s{font-size:20px}.axis{stroke:#64748b;stroke-width:2}.curve{fill:none;stroke:#2563eb;stroke-width:4}.ray{fill:none;stroke:#ea580c;stroke-width:3;marker-end:url(#a)}.focus{fill:#dc2626}</style>
+<text x="600" y="45" text-anchor="middle" class="t h">Оптическое свойство параболы</text>
+<line x1="100" y1="330" x2="1110" y2="330" class="axis" marker-end="url(#a)"/><text x="1080" y="315" class="t s">ось</text>
+<path d="M220 100 Q520 330 220 560" class="curve"/>
+<circle cx="410" cy="330" r="7" class="focus"/><text x="420" y="318" class="t s">F</text>
+<path d="M1080 165 L360 165 L410 330" class="ray"/><path d="M1080 245 L470 245 L410 330" class="ray"/><path d="M1080 415 L470 415 L410 330" class="ray"/><path d="M1080 495 L360 495 L410 330" class="ray"/>
+<text x="720" y="600" class="t s" text-anchor="middle">Лучи, параллельные оси параболы, после отражения проходят через фокус F.</text>
+</svg>
