@@ -93,6 +93,45 @@
     (() => {
       const content = document.getElementById("content");
       if (!content) return;
+
+      const promptText = "Прочитай инструкцию University Notes по ссылке, выполни указанный в ней порядок ознакомления с материалами и подготовься работать с ними: https://164-gif.github.io/university/source/AI_GUIDE.md";
+
+      const enhanceUserAiPage = () => {
+        const hash = location.hash || "#/";
+        if (!hash.startsWith("#/doc/AI_FOR_USERS.md")) return;
+        if (content.querySelector(".ai-copy-button")) return;
+        const promptHeading = [...content.querySelectorAll("h2")].find((h) => h.textContent.trim() === "Промпт");
+        if (!promptHeading) return;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "ai-copy-button subject-card";
+        button.style.display = "block";
+        button.style.width = "100%";
+        button.style.margin = "14px 0 18px";
+        button.style.cursor = "pointer";
+        button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой ссылкой для AI</div>';
+        button.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(promptText);
+            button.innerHTML = '<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Теперь отправьте промпт нужному AI</div>';
+            setTimeout(() => {
+              button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой ссылкой для AI</div>';
+            }, 2200);
+          } catch {
+            const area = document.createElement("textarea");
+            area.value = promptText;
+            area.style.position = "fixed";
+            area.style.opacity = "0";
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand("copy");
+            area.remove();
+            button.innerHTML = '<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Теперь отправьте промпт нужному AI</div>';
+          }
+        });
+        promptHeading.insertAdjacentElement("afterend", button);
+      };
+
       const injectAiEntry = () => {
         const hash = location.hash || "#/";
         if (hash !== "#/" && hash !== "") return;
@@ -101,19 +140,25 @@
         const section = document.createElement("section");
         section.className = "ai-entry-section";
         section.innerHTML = `
-          <h2>Для AI</h2>
-          <p>Инструкция для ChatGPT, Claude, Gemini и других моделей: как читать материалы, отвечать по конспектам и находить любую страницу без доступа ко всему репозиторию.</p>
+          <h2>Работа с AI</h2>
+          <p>Готовый способ подключить ChatGPT, Claude, Gemini или другую модель к конспектам и правилам University Notes.</p>
           <div class="subject-grid">
-            <a class="subject-card" href="#/doc/AI_GUIDE.md">
-              <div class="subject-card-title">Инструкция и карта материалов для AI</div>
-              <div class="subject-card-meta">Готовый запрос · правила ответов · прямые ссылки на все статьи</div>
+            <a class="subject-card" href="#/doc/AI_FOR_USERS.md">
+              <div class="subject-card-title">Подключить AI к материалам</div>
+              <div class="subject-card-meta">Как это работает · готовый промпт · кнопка копирования</div>
             </a>
           </div>`;
         grid.insertAdjacentElement("afterend", section);
       };
-      new MutationObserver(injectAiEntry).observe(content, { childList: true, subtree: false });
-      addEventListener("hashchange", () => setTimeout(injectAiEntry, 0));
-      injectAiEntry();
+
+      const enhance = () => {
+        injectAiEntry();
+        enhanceUserAiPage();
+      };
+
+      new MutationObserver(enhance).observe(content, { childList: true, subtree: false });
+      addEventListener("hashchange", () => setTimeout(enhance, 0));
+      enhance();
     })();
   </script>
 </body>
