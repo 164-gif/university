@@ -96,40 +96,48 @@
 
       const promptText = "Прочитай полностью инструкцию University Notes по этой прямой текстовой ссылке, выполни указанный в ней порядок ознакомления и подготовься работать с материалами: https://164-gif.github.io/university/AI_ENTRY.txt";
 
+      const copyPrompt = async (button, label) => {
+        const idle = `<div class="subject-card-title">${label} — копировать промпт</div><div class="subject-card-meta">Готовый запрос для обычного мобильного приложения</div>`;
+        const done = `<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Откройте ${label} и отправьте текст в новый чат</div>`;
+        try {
+          await navigator.clipboard.writeText(promptText);
+        } catch {
+          const area = document.createElement("textarea");
+          area.value = promptText;
+          area.style.position = "fixed";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          document.execCommand("copy");
+          area.remove();
+        }
+        button.innerHTML = done;
+        setTimeout(() => { button.innerHTML = idle; }, 2200);
+      };
+
       const enhanceUserAiPage = () => {
         const hash = location.hash || "#/";
         if (!hash.startsWith("#/doc/AI_FOR_USERS.md")) return;
-        if (content.querySelector(".ai-copy-button")) return;
-        const promptHeading = [...content.querySelectorAll("h2")].find((h) => h.textContent.trim() === "Промпт");
-        if (!promptHeading) return;
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "ai-copy-button subject-card";
-        button.style.display = "block";
-        button.style.width = "100%";
-        button.style.margin = "14px 0 18px";
-        button.style.cursor = "pointer";
-        button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой текстовой ссылкой для AI</div>';
-        button.addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(promptText);
-            button.innerHTML = '<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Теперь отправьте промпт нужному AI</div>';
-            setTimeout(() => {
-              button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой текстовой ссылкой для AI</div>';
-            }, 2200);
-          } catch {
-            const area = document.createElement("textarea");
-            area.value = promptText;
-            area.style.position = "fixed";
-            area.style.opacity = "0";
-            document.body.appendChild(area);
-            area.select();
-            document.execCommand("copy");
-            area.remove();
-            button.innerHTML = '<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Теперь отправьте промпт нужному AI</div>';
-          }
+        if (content.querySelector(".ai-provider-buttons")) return;
+        const mobileHeading = [...content.querySelectorAll("h2")].find((h) => h.textContent.trim() === "Обычные AI на телефоне");
+        if (!mobileHeading) return;
+
+        const wrap = document.createElement("div");
+        wrap.className = "subject-grid ai-provider-buttons";
+        wrap.style.margin = "16px 0 24px";
+
+        ["Qwen", "Claude", "GLM (Z.ai)"].forEach((label) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "subject-card";
+          button.style.cursor = "pointer";
+          button.style.textAlign = "left";
+          button.innerHTML = `<div class="subject-card-title">${label} — копировать промпт</div><div class="subject-card-meta">Готовый запрос для обычного мобильного приложения</div>`;
+          button.addEventListener("click", () => copyPrompt(button, label));
+          wrap.appendChild(button);
         });
-        promptHeading.insertAdjacentElement("afterend", button);
+
+        mobileHeading.insertAdjacentElement("afterend", wrap);
       };
 
       const injectAiEntry = () => {
@@ -141,11 +149,11 @@
         section.className = "ai-entry-section";
         section.innerHTML = `
           <h2>Работа с AI</h2>
-          <p>Готовый способ подключить ChatGPT, Claude, Gemini или другую модель к конспектам и правилам University Notes.</p>
+          <p>Qwen, Claude и GLM/Z.ai могут читать опубликованные материалы с телефона. Для ChatGPT есть отдельный вариант через проект и GitHub; ниже описаны агенты и неподдерживаемые приложения.</p>
           <div class="subject-grid">
             <a class="subject-card" href="#/doc/AI_FOR_USERS.md">
-              <div class="subject-card-title">Подключить AI к материалам</div>
-              <div class="subject-card-meta">Как это работает · готовый промпт · кнопка копирования</div>
+              <div class="subject-card-title">Открыть раздел «Работа с AI»</div>
+              <div class="subject-card-meta">Qwen · Claude · GLM/Z.ai · ChatGPT · агенты · совместимость</div>
             </a>
           </div>`;
         grid.insertAdjacentElement("afterend", section);
