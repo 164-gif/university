@@ -94,7 +94,7 @@
       const content = document.getElementById("content");
       if (!content) return;
 
-      const promptText = "Прочитай инструкцию University Notes по ссылке, выполни указанный в ней порядок ознакомления с материалами и подготовься работать с ними: https://164-gif.github.io/university/source/AI_GUIDE.md";
+      const promptText = "Прочитай полностью инструкцию University Notes по этой прямой текстовой ссылке, выполни указанный в ней порядок ознакомления и подготовься работать с материалами: https://164-gif.github.io/university/AI_ENTRY.txt";
 
       const enhanceUserAiPage = () => {
         const hash = location.hash || "#/";
@@ -109,13 +109,13 @@
         button.style.width = "100%";
         button.style.margin = "14px 0 18px";
         button.style.cursor = "pointer";
-        button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой ссылкой для AI</div>';
+        button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой текстовой ссылкой для AI</div>';
         button.addEventListener("click", async () => {
           try {
             await navigator.clipboard.writeText(promptText);
             button.innerHTML = '<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Теперь отправьте промпт нужному AI</div>';
             setTimeout(() => {
-              button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой ссылкой для AI</div>';
+              button.innerHTML = '<div class="subject-card-title">Копировать промпт</div><div class="subject-card-meta">Скопирует готовый запрос вместе с прямой текстовой ссылкой для AI</div>';
             }, 2200);
           } catch {
             const area = document.createElement("textarea");
