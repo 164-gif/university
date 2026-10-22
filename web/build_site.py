@@ -124,7 +124,7 @@ def main() -> None:
     assets = []
 
     roots = [ROOT / "subjects", ROOT / "cohorts"]
-    for root_name in ("README.md", "AI_GUIDE.md", "AGENTS.md", "usethis.md"):
+    for root_name in ("README.md", "AI_FOR_USERS.md", "AI_GUIDE.md", "AGENTS.md", "usethis.md"):
         root_file = ROOT / root_name
         if root_file.exists():
             roots.append(root_file)
@@ -204,7 +204,7 @@ def main() -> None:
 
     cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 3,
+        "version": 4,
         "repository": "164-gif/university",
         "defaultCohort": DEFAULT_COHORT,
         "cohorts": cohorts,
