@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 from pathlib import Path
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "_site"
@@ -90,6 +91,17 @@ def copy_asset(src: Path) -> None:
     shutil.copy2(src, dst)
 
 
+def copy_ai_source(src: Path) -> None:
+    rel = src.relative_to(ROOT)
+    dst = OUT / "source" / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+
+
+def source_url(path: str) -> str:
+    return "source/" + "/".join(quote(part) for part in Path(path).parts)
+
+
 def main() -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
@@ -111,11 +123,11 @@ def main() -> None:
     docs = []
     assets = []
 
-    # Existing subjects belong to IB-2026 / 1 course. New cohorts can store
-    # their own content under cohorts/<cohort>/subjects/<subject>/...
     roots = [ROOT / "subjects", ROOT / "cohorts"]
-    if (ROOT / "README.md").exists():
-        roots.append(ROOT / "README.md")
+    for root_name in ("README.md", "AI_GUIDE.md", "AGENTS.md", "usethis.md"):
+        root_file = ROOT / root_name
+        if root_file.exists():
+            roots.append(root_file)
 
     paths: list[Path] = []
     for root in roots:
@@ -124,7 +136,7 @@ def main() -> None:
         elif root.exists():
             paths.extend(p for p in root.rglob("*") if p.is_file())
 
-    for path in sorted(paths):
+    for path in sorted(set(paths)):
         if should_skip(path):
             continue
         rel = path.relative_to(ROOT)
@@ -148,9 +160,42 @@ def main() -> None:
                     "meta": meta,
                 }
             )
+            copy_ai_source(path)
         elif suffix in ASSET_EXTS:
             copy_asset(path)
             assets.append(rel.as_posix())
+
+    # AI-facing sitemap: direct static text links, no JavaScript required.
+    study_docs = [d for d in docs if d["subject"] != "repository"]
+    lines = [
+        "# AI-карта University Notes",
+        "",
+        "Эта страница создана для AI, которые не могут прочитать JavaScript-интерфейс сайта или весь GitHub-репозиторий.",
+        "Сначала прочитайте [инструкцию для AI](source/AI_GUIDE.md). Затем открывайте нужные текстовые источники ниже.",
+        "",
+        f"Всего учебных страниц: **{len(study_docs)}**.",
+        "",
+    ]
+    current_group = None
+    for doc in sorted(study_docs, key=lambda d: (d["cohort"], d["subject"], d["section"], d["title"].lower())):
+        group = (doc["cohort"], doc["subject"])
+        if group != current_group:
+            if current_group is not None:
+                lines.append("")
+            lines.extend([f"## {doc['cohort']} / {doc['subject']}", ""])
+            current_group = group
+        lines.append(f"- [{doc['title']}]({source_url(doc['path'])}) — `{doc['path']}`")
+    lines.extend([
+        "",
+        "## Служебные инструкции",
+        "",
+        "- [AI_GUIDE.md](source/AI_GUIDE.md)",
+        "- [usethis.md](source/usethis.md)",
+        "- [AGENTS.md](source/AGENTS.md)",
+        "- [README.md](source/README.md)",
+        "",
+    ])
+    (OUT / "AI_SITEMAP.md").write_text("\n".join(lines), encoding="utf-8")
 
     cohort_counts = {c["id"]: 0 for c in COHORTS}
     for doc in docs:
@@ -159,7 +204,7 @@ def main() -> None:
 
     cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 2,
+        "version": 3,
         "repository": "164-gif/university",
         "defaultCohort": DEFAULT_COHORT,
         "cohorts": cohorts,
