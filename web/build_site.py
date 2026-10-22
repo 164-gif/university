@@ -115,6 +115,13 @@ def ai_text_url(path: str) -> str:
     return f"{BASE_URL}/ai/source/{encoded}.txt"
 
 
+def read_root_text(name: str) -> str:
+    path = ROOT / name
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
 def main() -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
@@ -181,7 +188,6 @@ def main() -> None:
 
     study_docs = [d for d in docs if d["subject"] != "repository"]
 
-    # Human-readable Markdown sitemap.
     lines = [
         "# AI-карта University Notes",
         "",
@@ -212,12 +218,10 @@ def main() -> None:
     ])
     (OUT / "AI_SITEMAP.md").write_text("\n".join(lines), encoding="utf-8")
 
-    # Machine-oriented plain-text sitemap with absolute URLs.
     text_lines = [
         "UNIVERSITY NOTES — AI SITEMAP",
         "",
-        "Use these direct plain-text URLs. They do not require JavaScript or client rendering.",
-        f"AI instructions: {BASE_URL}/AI_ENTRY.txt",
+        "Direct plain-text URLs for specific materials.",
         f"Total study documents: {len(study_docs)}",
         "",
     ]
@@ -230,36 +234,47 @@ def main() -> None:
             text_lines.append(f"[{doc['cohort']} / {doc['subject']}]")
             current_group = group
         text_lines.append(f"{doc['title']} | {doc['section']} | {ai_text_url(doc['path'])}")
-    text_lines.extend([
-        "",
-        "SERVICE RULES",
-        f"README: {ai_text_url('README.md')}",
-        f"AGENTS: {ai_text_url('AGENTS.md')}",
-        f"USETHIS: {ai_text_url('usethis.md')}",
-    ])
-    (OUT / "AI_SITEMAP.txt").write_text("\n".join(text_lines), encoding="utf-8")
+    sitemap_text = "\n".join(text_lines)
+    (OUT / "AI_SITEMAP.txt").write_text(sitemap_text, encoding="utf-8")
 
-    guide_path = ROOT / "AI_GUIDE.md"
-    guide_text = guide_path.read_text(encoding="utf-8") if guide_path.exists() else ""
+    guide_text = read_root_text("AI_GUIDE.md")
+    agents_text = read_root_text("AGENTS.md")
+    usethis_text = read_root_text("usethis.md")
+    readme_text = read_root_text("README.md")
+
     ai_entry = "\n".join([
-        "UNIVERSITY NOTES — AI ENTRY POINT",
+        "UNIVERSITY NOTES — SELF-CONTAINED AI ENTRY POINT",
         "",
-        "This is a machine-readable plain-text entry point. Do not look for a JavaScript page.",
-        "Read this file completely before answering the user.",
+        "This single file contains all mandatory initialization rules and the complete material map.",
+        "Do not require the user to provide any additional initialization page.",
+        "Read this file completely before declaring readiness.",
         "",
-        f"MANDATORY MATERIAL MAP: {BASE_URL}/AI_SITEMAP.txt",
-        f"FULL AGENT RULES: {ai_text_url('AGENTS.md')}",
-        f"REPOSITORY INSTRUCTIONS: {ai_text_url('usethis.md')}",
-        f"REPOSITORY README: {ai_text_url('README.md')}",
+        "READINESS RULE",
+        "After reading this complete file, answer exactly:",
+        "Готов. Ознакомился с правилами University Notes и картой материалов. ⟦UNIV-AI-READY⟧",
         "",
-        "Before declaring readiness, open the material map and the three rule files above.",
-        "If any mandatory URL cannot be opened, explicitly say which URL failed and DO NOT output the readiness marker.",
-        "After successful reading, answer exactly: Готов. Ознакомился с правилами University Notes и картой материалов. ⟦UNIV-AI-READY⟧",
+        "IMPORTANT:",
+        "- You no longer need to open AI_SITEMAP.txt, AGENTS.md.txt, usethis.md.txt or README.md.txt to initialize.",
+        "- Their required contents are embedded below in this file.",
+        "- URLs in the material map are only needed later when the user asks about a specific subject or topic.",
+        "- If a specific material URL cannot be opened later, say which material is unavailable; do not pretend you read it.",
         "",
-        "FULL INSTRUCTIONS BELOW",
-        "=======================",
-        "",
+        "================ AI GUIDE ================",
         guide_text,
+        "",
+        "================ AGENT RULES ================",
+        agents_text,
+        "",
+        "================ REPOSITORY INSTRUCTIONS ================",
+        usethis_text,
+        "",
+        "================ REPOSITORY README ================",
+        readme_text,
+        "",
+        "================ COMPLETE MATERIAL MAP ================",
+        sitemap_text,
+        "",
+        "================ END ================",
     ])
     (OUT / "AI_ENTRY.txt").write_text(ai_entry, encoding="utf-8")
 
@@ -270,7 +285,7 @@ def main() -> None:
 
     cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 5,
+        "version": 6,
         "repository": "164-gif/university",
         "defaultCohort": DEFAULT_COHORT,
         "cohorts": cohorts,
