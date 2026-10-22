@@ -10,6 +10,7 @@ from urllib.parse import quote
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "_site"
 WEB = ROOT / "web"
+BASE_URL = "https://164-gif.github.io/university"
 
 DOC_EXTS = {".md", ".txt"}
 ASSET_EXTS = {
@@ -98,8 +99,20 @@ def copy_ai_source(src: Path) -> None:
     shutil.copy2(src, dst)
 
 
+def copy_ai_text(src: Path, text: str) -> None:
+    rel = src.relative_to(ROOT)
+    dst = OUT / "ai" / "source" / Path(rel.as_posix() + ".txt")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(text, encoding="utf-8")
+
+
 def source_url(path: str) -> str:
     return "source/" + "/".join(quote(part) for part in Path(path).parts)
+
+
+def ai_text_url(path: str) -> str:
+    encoded = "/".join(quote(part) for part in Path(path).parts)
+    return f"{BASE_URL}/ai/source/{encoded}.txt"
 
 
 def main() -> None:
@@ -161,12 +174,14 @@ def main() -> None:
                 }
             )
             copy_ai_source(path)
+            copy_ai_text(path, text)
         elif suffix in ASSET_EXTS:
             copy_asset(path)
             assets.append(rel.as_posix())
 
-    # AI-facing sitemap: direct static text links, no JavaScript required.
     study_docs = [d for d in docs if d["subject"] != "repository"]
+
+    # Human-readable Markdown sitemap.
     lines = [
         "# AI-карта University Notes",
         "",
@@ -197,6 +212,57 @@ def main() -> None:
     ])
     (OUT / "AI_SITEMAP.md").write_text("\n".join(lines), encoding="utf-8")
 
+    # Machine-oriented plain-text sitemap with absolute URLs.
+    text_lines = [
+        "UNIVERSITY NOTES — AI SITEMAP",
+        "",
+        "Use these direct plain-text URLs. They do not require JavaScript or client rendering.",
+        f"AI instructions: {BASE_URL}/AI_ENTRY.txt",
+        f"Total study documents: {len(study_docs)}",
+        "",
+    ]
+    current_group = None
+    for doc in sorted(study_docs, key=lambda d: (d["cohort"], d["subject"], d["section"], d["title"].lower())):
+        group = (doc["cohort"], doc["subject"])
+        if group != current_group:
+            if current_group is not None:
+                text_lines.append("")
+            text_lines.append(f"[{doc['cohort']} / {doc['subject']}]")
+            current_group = group
+        text_lines.append(f"{doc['title']} | {doc['section']} | {ai_text_url(doc['path'])}")
+    text_lines.extend([
+        "",
+        "SERVICE RULES",
+        f"README: {ai_text_url('README.md')}",
+        f"AGENTS: {ai_text_url('AGENTS.md')}",
+        f"USETHIS: {ai_text_url('usethis.md')}",
+    ])
+    (OUT / "AI_SITEMAP.txt").write_text("\n".join(text_lines), encoding="utf-8")
+
+    guide_path = ROOT / "AI_GUIDE.md"
+    guide_text = guide_path.read_text(encoding="utf-8") if guide_path.exists() else ""
+    ai_entry = "\n".join([
+        "UNIVERSITY NOTES — AI ENTRY POINT",
+        "",
+        "This is a machine-readable plain-text entry point. Do not look for a JavaScript page.",
+        "Read this file completely before answering the user.",
+        "",
+        f"MANDATORY MATERIAL MAP: {BASE_URL}/AI_SITEMAP.txt",
+        f"FULL AGENT RULES: {ai_text_url('AGENTS.md')}",
+        f"REPOSITORY INSTRUCTIONS: {ai_text_url('usethis.md')}",
+        f"REPOSITORY README: {ai_text_url('README.md')}",
+        "",
+        "Before declaring readiness, open the material map and the three rule files above.",
+        "If any mandatory URL cannot be opened, explicitly say which URL failed and DO NOT output the readiness marker.",
+        "After successful reading, answer exactly: Готов. Ознакомился с правилами University Notes и картой материалов. ⟦UNIV-AI-READY⟧",
+        "",
+        "FULL INSTRUCTIONS BELOW",
+        "=======================",
+        "",
+        guide_text,
+    ])
+    (OUT / "AI_ENTRY.txt").write_text(ai_entry, encoding="utf-8")
+
     cohort_counts = {c["id"]: 0 for c in COHORTS}
     for doc in docs:
         if doc["cohort"] in cohort_counts:
@@ -204,7 +270,7 @@ def main() -> None:
 
     cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 4,
+        "version": 5,
         "repository": "164-gif/university",
         "defaultCohort": DEFAULT_COHORT,
         "cohorts": cohorts,
