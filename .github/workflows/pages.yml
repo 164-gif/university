@@ -3,12 +3,6 @@ name: Deploy University Notes
 on:
   push:
     branches: [main]
-    paths:
-      - "subjects/**"
-      - "cohorts/**"
-      - "web/**"
-      - "README.md"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
