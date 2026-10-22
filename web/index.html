@@ -42,18 +42,8 @@
   <footer class="site-footer">
     <span class="footer-label">Статистика посещений</span>
     <div class="visitor-counters">
-      <img
-        class="visitor-counter"
-        src="https://visitor-badge.one9x.com/badge?page_id=university-164-gif-total&namespace=univ164&left_text=%D0%92%D1%81%D0%B5%D0%B3%D0%BE&left_color=%235b6472&right_color=%234665e5"
-        alt="Всего посещений"
-        loading="eager"
-      />
-      <img
-        class="visitor-counter"
-        src="https://visitor-badge.one9x.com/badge?page_id=university-164-gif-unique&namespace=univ164&unique=true&timeframe=86400&left_text=%D0%A3%D0%BD%D0%B8%D0%BA%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D0%B7%D0%B0%2024%D1%87&left_color=%235b6472&right_color=%234665e5"
-        alt="Уникальные посетители за 24 часа"
-        loading="eager"
-      />
+      <img class="visitor-counter" src="https://visitor-badge.one9x.com/badge?page_id=university-164-gif-total&namespace=univ164&left_text=%D0%92%D1%81%D0%B5%D0%B3%D0%BE&left_color=%235b6472&right_color=%234665e5" alt="Всего посещений" loading="eager" />
+      <img class="visitor-counter" src="https://visitor-badge.one9x.com/badge?page_id=university-164-gif-unique&namespace=univ164&unique=true&timeframe=86400&left_text=%D0%A3%D0%BD%D0%B8%D0%BA%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D0%B7%D0%B0%2024%D1%87&left_color=%235b6472&right_color=%234665e5" alt="Уникальные посетители за 24 часа" loading="eager" />
     </div>
   </footer>
 
@@ -98,6 +88,32 @@
       });
       addEventListener("hashchange", normalizeCohortHash);
       normalizeCohortHash();
+    })();
+
+    (() => {
+      const content = document.getElementById("content");
+      if (!content) return;
+      const injectAiEntry = () => {
+        const hash = location.hash || "#/";
+        if (hash !== "#/" && hash !== "") return;
+        const grid = content.querySelector(":scope > .subject-grid");
+        if (!grid || content.querySelector(".ai-entry-section")) return;
+        const section = document.createElement("section");
+        section.className = "ai-entry-section";
+        section.innerHTML = `
+          <h2>Для AI</h2>
+          <p>Инструкция для ChatGPT, Claude, Gemini и других моделей: как читать материалы, отвечать по конспектам и находить любую страницу без доступа ко всему репозиторию.</p>
+          <div class="subject-grid">
+            <a class="subject-card" href="#/doc/AI_GUIDE.md">
+              <div class="subject-card-title">Инструкция и карта материалов для AI</div>
+              <div class="subject-card-meta">Готовый запрос · правила ответов · прямые ссылки на все статьи</div>
+            </a>
+          </div>`;
+        grid.insertAdjacentElement("afterend", section);
+      };
+      new MutationObserver(injectAiEntry).observe(content, { childList: true, subtree: false });
+      addEventListener("hashchange", () => setTimeout(injectAiEntry, 0));
+      injectAiEntry();
     })();
   </script>
 </body>
