@@ -96,7 +96,7 @@
       if (!content) return;
 
       const promptText = "Прочитай полностью инструкцию University Notes по этой прямой текстовой ссылке, выполни указанный в ней порядок ознакомления и подготовься работать с материалами: https://164-gif.github.io/university/AI_ENTRY.txt";
-      const testPrompt = "Пройди полный тест доступа University Notes. Открой инструкцию теста, затем реально открой каждый перечисленный в ней файл, собери TEST_FRAGMENT из каждого файла строго по порядку и верни итоговые строки FILES_OK и KEY. Не заявляй об успешной совместимости, если хотя бы один файл недоступен: https://164-gif.github.io/university/AI_ACCESS_TEST.txt";
+      const testPrompt = "Пройди полный тест доступа University Notes V2. Обязательно заново открой ссылку ниже и не используй старый список из истории чата. Актуальный список должен содержать только короткие ASCII URL вида /ai/f/<id>.txt. Если видишь /ai/source/, кириллицу, %D0 или длинные имена файлов — это STALE_TEST, перечитай V2. Затем реально открой каждый файл, собери TEST_FRAGMENT строго по порядку и верни FILES_OK и KEY. Если хотя бы один файл недоступен, верни TEST_FAILED: https://164-gif.github.io/university/AI_ACCESS_TEST.txt?v=2";
 
       const copyText = async (text) => {
         try {
@@ -157,7 +157,7 @@
           const controls = document.createElement("div");
           controls.className = "subject-grid ai-test-controls";
           controls.style.margin = "16px 0 24px";
-          controls.append(makeCopyButton("Копировать полный тест AI", "Проверит доступ ко всем опубликованным текстовым файлам", testPrompt));
+          controls.append(makeCopyButton("Копировать полный тест AI V2", "Короткие ASCII-ссылки и защита от старого кэша", testPrompt));
           runHeading.insertAdjacentElement("afterend", controls);
         }
 
@@ -185,6 +185,10 @@
             return;
           }
           const raw = input.value.trim();
+          if (/\/ai\/source\/|%D0|URL_TOO_LONG|STALE_TEST/i.test(raw)) {
+            result.innerHTML = '<strong>Использована старая версия теста.</strong> Скопируйте V2 заново и запустите её в новом чате.';
+            return;
+          }
           const match = raw.match(/(?:^|\n)KEY=(UNIV-FULL-[A-F0-9]+)/i) || raw.match(/(UNIV-FULL-[A-F0-9]+)/i);
           const key = match ? match[1].toUpperCase() : raw.toUpperCase();
           if (key === cfg.expectedKey.toUpperCase()) {
@@ -212,7 +216,7 @@
             </a>
             <a class="subject-card" href="#/doc/AI_TEST.md">
               <div class="subject-card-title">Проверить полный доступ AI</div>
-              <div class="subject-card-meta">Все файлы · контрольные фрагменты · итоговый ключ</div>
+              <div class="subject-card-meta">V2 · короткие ссылки · контрольные фрагменты · итоговый ключ</div>
             </a>
           </div>`;
         grid.insertAdjacentElement("afterend", section);
