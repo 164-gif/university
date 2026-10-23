@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -99,11 +100,24 @@ def copy_ai_source(src: Path) -> None:
     shutil.copy2(src, dst)
 
 
-def copy_ai_text(src: Path, text: str) -> None:
+def test_fragment(path: str, text: str) -> str:
+    payload = f"UNIVERSITY-NOTES-AI-ACCESS-v1\n{path}\n{text}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()[:4].upper()
+
+
+def copy_ai_text(src: Path, text: str, fragment: str) -> None:
     rel = src.relative_to(ROOT)
     dst = OUT / "ai" / "source" / Path(rel.as_posix() + ".txt")
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(text, encoding="utf-8")
+    marked = "\n".join([
+        text.rstrip(),
+        "",
+        "[UNIVERSITY_NOTES_ACCESS_TEST]",
+        f"TEST_FRAGMENT: {fragment}",
+        "[/UNIVERSITY_NOTES_ACCESS_TEST]",
+        "",
+    ])
+    dst.write_text(marked, encoding="utf-8")
 
 
 def source_url(path: str) -> str:
@@ -144,7 +158,7 @@ def main() -> None:
     assets = []
 
     roots = [ROOT / "subjects", ROOT / "cohorts"]
-    for root_name in ("README.md", "AI_FOR_USERS.md", "AI_COMPATIBILITY.md", "AI_GUIDE.md", "AGENTS.md", "usethis.md"):
+    for root_name in ("README.md", "AI_FOR_USERS.md", "AI_COMPATIBILITY.md", "AI_TEST.md", "AI_GUIDE.md", "AGENTS.md", "usethis.md"):
         root_file = ROOT / root_name
         if root_file.exists():
             roots.append(root_file)
@@ -168,6 +182,7 @@ def main() -> None:
             except UnicodeDecodeError:
                 text = path.read_text(encoding="utf-8", errors="replace")
             _, meta = strip_frontmatter(text)
+            fragment = test_fragment(rel.as_posix(), text)
             docs.append(
                 {
                     "path": rel.as_posix(),
@@ -178,10 +193,11 @@ def main() -> None:
                     "ext": suffix[1:],
                     "content": text,
                     "meta": meta,
+                    "testFragment": fragment,
                 }
             )
             copy_ai_source(path)
-            copy_ai_text(path, text)
+            copy_ai_text(path, text, fragment)
         elif suffix in ASSET_EXTS:
             copy_asset(path)
             assets.append(rel.as_posix())
@@ -212,6 +228,7 @@ def main() -> None:
         "",
         "- [AI_GUIDE.md](source/AI_GUIDE.md)",
         "- [AI_COMPATIBILITY.md](source/AI_COMPATIBILITY.md)",
+        "- [AI_TEST.md](source/AI_TEST.md)",
         "- [usethis.md](source/usethis.md)",
         "- [AGENTS.md](source/AGENTS.md)",
         "- [README.md](source/README.md)",
@@ -238,6 +255,37 @@ def main() -> None:
     sitemap_text = "\n".join(text_lines)
     (OUT / "AI_SITEMAP.txt").write_text(sitemap_text, encoding="utf-8")
 
+    # Exhaustive AI-access test. The manifest never contains fragments or the final key.
+    # An AI must actually open every URL and read TEST_FRAGMENT from the file body.
+    tested_docs = sorted(docs, key=lambda d: d["path"])
+    expected_key = "UNIV-FULL-" + "".join(d["testFragment"] for d in tested_docs)
+    test_lines = [
+        "UNIVERSITY NOTES — FULL AI ACCESS TEST",
+        "",
+        "PURPOSE",
+        "This test verifies that you can really open every currently published text document, not just this page or AI_ENTRY.txt.",
+        "",
+        "STRICT RULES",
+        "1. Open EVERY URL below, one by one. Do not infer access from the index page.",
+        "2. In every opened file find the final block [UNIVERSITY_NOTES_ACCESS_TEST].",
+        "3. Copy the exact 4-character value after TEST_FRAGMENT:.",
+        "4. Keep fragments in exactly the order listed below.",
+        "5. If even one URL cannot be opened or its fragment is missing, report TEST_FAILED and list the failed URLs. Do not claim compatibility.",
+        "6. Only after all files were opened, concatenate all fragments without spaces and prefix them with UNIV-FULL-.",
+        "7. Return exactly two final lines: FILES_OK=<opened>/<total> and KEY=<assembled key>.",
+        "",
+        f"TOTAL_FILES={len(tested_docs)}",
+        "",
+        "FILES",
+    ]
+    for i, doc in enumerate(tested_docs, 1):
+        test_lines.append(f"{i}. {ai_text_url(doc['path'])}")
+    (OUT / "AI_ACCESS_TEST.txt").write_text("\n".join(test_lines) + "\n", encoding="utf-8")
+    (OUT / "ai-test-config.js").write_text(
+        "window.__AI_TEST__=" + json.dumps({"expectedKey": expected_key, "total": len(tested_docs)}, ensure_ascii=False) + ";\n",
+        encoding="utf-8",
+    )
+
     guide_text = read_root_text("AI_GUIDE.md")
     agents_text = read_root_text("AGENTS.md")
     usethis_text = read_root_text("usethis.md")
@@ -255,9 +303,9 @@ def main() -> None:
         "Готов. Ознакомился с правилами University Notes и картой материалов. ⟦UNIV-AI-READY⟧",
         "",
         "IMPORTANT:",
-        "- You no longer need to open AI_SITEMAP.txt, AGENTS.md.txt, usethis.md.txt or README.md.txt to initialize.",
-        "- Their required contents are embedded below in this file.",
-        "- URLs in the material map are only needed later when the user asks about a specific subject or topic.",
+        "- Reading this entry point proves only initialization, NOT access to every material.",
+        f"- To prove full site compatibility, run the separate access test: {BASE_URL}/AI_ACCESS_TEST.txt",
+        "- URLs in the material map are needed when the user asks about a specific subject or topic.",
         "- If a specific material URL cannot be opened later, say which material is unavailable; do not pretend you read it.",
         "",
         "================ AI GUIDE ================",
@@ -286,11 +334,11 @@ def main() -> None:
 
     cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 7,
+        "version": 8,
         "repository": "164-gif/university",
         "defaultCohort": DEFAULT_COHORT,
         "cohorts": cohorts,
-        "docs": docs,
+        "docs": [{k: v for k, v in d.items() if k != "testFragment"} for d in docs],
         "assets": assets,
         "stats": {"documents": len(docs), "assets": len(assets), "cohorts": len(cohorts)},
     }
