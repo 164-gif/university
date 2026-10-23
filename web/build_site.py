@@ -100,14 +100,17 @@ def copy_ai_source(src: Path) -> None:
     shutil.copy2(src, dst)
 
 
+def ai_file_id(path: str) -> str:
+    return hashlib.sha256(path.encode("utf-8")).hexdigest()[:12]
+
+
 def test_fragment(path: str, text: str) -> str:
     payload = f"UNIVERSITY-NOTES-AI-ACCESS-v1\n{path}\n{text}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()[:4].upper()
 
 
-def copy_ai_text(src: Path, text: str, fragment: str) -> None:
-    rel = src.relative_to(ROOT)
-    dst = OUT / "ai" / "source" / Path(rel.as_posix() + ".txt")
+def copy_ai_text(src: Path, text: str, fragment: str, file_id: str) -> None:
+    dst = OUT / "ai" / "f" / f"{file_id}.txt"
     dst.parent.mkdir(parents=True, exist_ok=True)
     marked = "\n".join([
         text.rstrip(),
@@ -124,9 +127,8 @@ def source_url(path: str) -> str:
     return "source/" + "/".join(quote(part) for part in Path(path).parts)
 
 
-def ai_text_url(path: str) -> str:
-    encoded = "/".join(quote(part) for part in Path(path).parts)
-    return f"{BASE_URL}/ai/source/{encoded}.txt"
+def ai_text_url(file_id: str) -> str:
+    return f"{BASE_URL}/ai/f/{file_id}.txt"
 
 
 def read_root_text(name: str) -> str:
@@ -182,22 +184,23 @@ def main() -> None:
             except UnicodeDecodeError:
                 text = path.read_text(encoding="utf-8", errors="replace")
             _, meta = strip_frontmatter(text)
-            fragment = test_fragment(rel.as_posix(), text)
-            docs.append(
-                {
-                    "path": rel.as_posix(),
-                    "title": title_for(path, text, meta),
-                    "cohort": cohort_for(rel),
-                    "subject": subject_for(rel),
-                    "section": section_for(rel),
-                    "ext": suffix[1:],
-                    "content": text,
-                    "meta": meta,
-                    "testFragment": fragment,
-                }
-            )
+            rel_path = rel.as_posix()
+            fragment = test_fragment(rel_path, text)
+            file_id = ai_file_id(rel_path)
+            docs.append({
+                "path": rel_path,
+                "title": title_for(path, text, meta),
+                "cohort": cohort_for(rel),
+                "subject": subject_for(rel),
+                "section": section_for(rel),
+                "ext": suffix[1:],
+                "content": text,
+                "meta": meta,
+                "testFragment": fragment,
+                "aiFileId": file_id,
+            })
             copy_ai_source(path)
-            copy_ai_text(path, text, fragment)
+            copy_ai_text(path, text, fragment, file_id)
         elif suffix in ASSET_EXTS:
             copy_asset(path)
             assets.append(rel.as_posix())
@@ -239,7 +242,7 @@ def main() -> None:
     text_lines = [
         "UNIVERSITY NOTES — AI SITEMAP",
         "",
-        "Direct plain-text URLs for specific materials.",
+        "Direct short ASCII URLs for specific materials.",
         f"Total study documents: {len(study_docs)}",
         "",
     ]
@@ -251,12 +254,10 @@ def main() -> None:
                 text_lines.append("")
             text_lines.append(f"[{doc['cohort']} / {doc['subject']}]")
             current_group = group
-        text_lines.append(f"{doc['title']} | {doc['section']} | {ai_text_url(doc['path'])}")
+        text_lines.append(f"{doc['title']} | {doc['section']} | {ai_text_url(doc['aiFileId'])}")
     sitemap_text = "\n".join(text_lines)
     (OUT / "AI_SITEMAP.txt").write_text(sitemap_text, encoding="utf-8")
 
-    # Exhaustive AI-access test. The manifest never contains fragments or the final key.
-    # An AI must actually open every URL and read TEST_FRAGMENT from the file body.
     tested_docs = sorted(docs, key=lambda d: d["path"])
     expected_key = "UNIV-FULL-" + "".join(d["testFragment"] for d in tested_docs)
     test_lines = [
@@ -274,12 +275,14 @@ def main() -> None:
         "6. Only after all files were opened, concatenate all fragments without spaces and prefix them with UNIV-FULL-.",
         "7. Return exactly two final lines: FILES_OK=<opened>/<total> and KEY=<assembled key>.",
         "",
+        "NOTE: all test URLs are deliberately short ASCII-only URLs, so models with strict URL-length limits should not fail because of Cyrillic path encoding.",
+        "",
         f"TOTAL_FILES={len(tested_docs)}",
         "",
         "FILES",
     ]
     for i, doc in enumerate(tested_docs, 1):
-        test_lines.append(f"{i}. {ai_text_url(doc['path'])}")
+        test_lines.append(f"{i}. {ai_text_url(doc['aiFileId'])}")
     (OUT / "AI_ACCESS_TEST.txt").write_text("\n".join(test_lines) + "\n", encoding="utf-8")
     (OUT / "ai-test-config.js").write_text(
         "window.__AI_TEST__=" + json.dumps({"expectedKey": expected_key, "total": len(tested_docs)}, ensure_ascii=False) + ";\n",
@@ -305,6 +308,7 @@ def main() -> None:
         "IMPORTANT:",
         "- Reading this entry point proves only initialization, NOT access to every material.",
         f"- To prove full site compatibility, run the separate access test: {BASE_URL}/AI_ACCESS_TEST.txt",
+        "- All machine-facing material URLs are short ASCII-only URLs under /ai/f/.",
         "- URLs in the material map are needed when the user asks about a specific subject or topic.",
         "- If a specific material URL cannot be opened later, say which material is unavailable; do not pretend you read it.",
         "",
@@ -334,11 +338,11 @@ def main() -> None:
 
     cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 8,
+        "version": 9,
         "repository": "164-gif/university",
         "defaultCohort": DEFAULT_COHORT,
         "cohorts": cohorts,
-        "docs": [{k: v for k, v in d.items() if k != "testFragment"} for d in docs],
+        "docs": [{k: v for k, v in d.items() if k not in {"testFragment", "aiFileId"}} for d in docs],
         "assets": assets,
         "stats": {"documents": len(docs), "assets": len(assets), "cohorts": len(cohorts)},
     }
