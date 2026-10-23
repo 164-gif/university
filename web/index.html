@@ -65,6 +65,7 @@
   <script defer>window.__mermaid = window.mermaid;</script>
   <script defer src="geometry-quiz.js?v=20261018-2"></script>
   <script defer src="geometry-quiz-bootstrap.js?v=20261018-2"></script>
+  <script defer src="ai-test-config.js"></script>
   <script defer src="app.js"></script>
   <script defer src="numbering.js"></script>
   <script defer src="subject-labels.js"></script>
@@ -95,15 +96,14 @@
       if (!content) return;
 
       const promptText = "Прочитай полностью инструкцию University Notes по этой прямой текстовой ссылке, выполни указанный в ней порядок ознакомления и подготовься работать с материалами: https://164-gif.github.io/university/AI_ENTRY.txt";
+      const testPrompt = "Пройди полный тест доступа University Notes. Открой инструкцию теста, затем реально открой каждый перечисленный в ней файл, собери TEST_FRAGMENT из каждого файла строго по порядку и верни итоговые строки FILES_OK и KEY. Не заявляй об успешной совместимости, если хотя бы один файл недоступен: https://164-gif.github.io/university/AI_ACCESS_TEST.txt";
 
-      const copyPrompt = async (button, label) => {
-        const idle = `<div class="subject-card-title">${label} — копировать промпт</div><div class="subject-card-meta">Готовый запрос для обычного мобильного приложения</div>`;
-        const done = `<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Откройте ${label} и отправьте текст в новый чат</div>`;
+      const copyText = async (text) => {
         try {
-          await navigator.clipboard.writeText(promptText);
+          await navigator.clipboard.writeText(text);
         } catch {
           const area = document.createElement("textarea");
-          area.value = promptText;
+          area.value = text;
           area.style.position = "fixed";
           area.style.opacity = "0";
           document.body.appendChild(area);
@@ -111,8 +111,22 @@
           document.execCommand("copy");
           area.remove();
         }
-        button.innerHTML = done;
-        setTimeout(() => { button.innerHTML = idle; }, 2200);
+      };
+
+      const makeCopyButton = (label, meta, text) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "subject-card";
+        button.style.cursor = "pointer";
+        button.style.textAlign = "left";
+        const idle = () => button.innerHTML = `<div class="subject-card-title">${label}</div><div class="subject-card-meta">${meta}</div>`;
+        idle();
+        button.addEventListener("click", async () => {
+          await copyText(text);
+          button.innerHTML = '<div class="subject-card-title">Скопировано ✓</div><div class="subject-card-meta">Отправьте текст выбранному AI</div>';
+          setTimeout(idle, 1800);
+        });
+        return button;
       };
 
       const enhanceUserAiPage = () => {
@@ -125,19 +139,60 @@
         const wrap = document.createElement("div");
         wrap.className = "subject-grid ai-provider-buttons";
         wrap.style.margin = "16px 0 24px";
-
-        ["Qwen", "Claude", "GLM (Z.ai)"].forEach((label) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "subject-card";
-          button.style.cursor = "pointer";
-          button.style.textAlign = "left";
-          button.innerHTML = `<div class="subject-card-title">${label} — копировать промпт</div><div class="subject-card-meta">Готовый запрос для обычного мобильного приложения</div>`;
-          button.addEventListener("click", () => copyPrompt(button, label));
-          wrap.appendChild(button);
-        });
-
+        wrap.append(
+          makeCopyButton("Qwen — копировать промпт", "Готовый запрос для обычного мобильного приложения", promptText),
+          makeCopyButton("Claude — копировать промпт", "Готовый запрос для обычного мобильного приложения", promptText),
+          makeCopyButton("GLM (Z.ai) — копировать промпт", "Готовый запрос для обычного мобильного приложения", promptText)
+        );
         mobileHeading.insertAdjacentElement("afterend", wrap);
+      };
+
+      const enhanceAiTestPage = () => {
+        const hash = location.hash || "#/";
+        if (!hash.startsWith("#/doc/AI_TEST.md")) return;
+        if (content.querySelector(".ai-test-controls")) return;
+
+        const runHeading = [...content.querySelectorAll("h2")].find((h) => h.textContent.trim() === "Как запустить");
+        if (runHeading) {
+          const controls = document.createElement("div");
+          controls.className = "subject-grid ai-test-controls";
+          controls.style.margin = "16px 0 24px";
+          controls.append(makeCopyButton("Копировать полный тест AI", "Проверит доступ ко всем опубликованным текстовым файлам", testPrompt));
+          runHeading.insertAdjacentElement("afterend", controls);
+        }
+
+        const verifyHeading = [...content.querySelectorAll("h2")].find((h) => h.textContent.trim() === "Проверка результата");
+        if (!verifyHeading) return;
+
+        const box = document.createElement("div");
+        box.className = "ai-test-validator";
+        box.style.margin = "14px 0 22px";
+        box.innerHTML = `
+          <textarea class="ai-test-key-input" rows="4" style="width:100%;box-sizing:border-box" placeholder="Вставьте ответ AI или строку KEY=UNIV-FULL-..."></textarea>
+          <button type="button" class="subject-card ai-test-check" style="display:block;width:100%;margin-top:10px;cursor:pointer;text-align:left">
+            <div class="subject-card-title">Проверить ключ</div>
+            <div class="subject-card-meta">Сравнить с текущей сборкой сайта</div>
+          </button>
+          <div class="ai-test-result" style="margin-top:12px"></div>`;
+        verifyHeading.insertAdjacentElement("afterend", box);
+
+        const input = box.querySelector(".ai-test-key-input");
+        const result = box.querySelector(".ai-test-result");
+        box.querySelector(".ai-test-check").addEventListener("click", () => {
+          const cfg = window.__AI_TEST__;
+          if (!cfg || !cfg.expectedKey) {
+            result.textContent = "Эталон теста ещё не загружен. Обновите страницу после завершения деплоя.";
+            return;
+          }
+          const raw = input.value.trim();
+          const match = raw.match(/(?:^|\n)KEY=(UNIV-FULL-[A-F0-9]+)/i) || raw.match(/(UNIV-FULL-[A-F0-9]+)/i);
+          const key = match ? match[1].toUpperCase() : raw.toUpperCase();
+          if (key === cfg.expectedKey.toUpperCase()) {
+            result.innerHTML = `<strong>Полный доступ подтверждён.</strong> Ключ совпал. Текущая сборка содержит ${cfg.total} проверяемых текстовых файлов.`;
+          } else {
+            result.innerHTML = `<strong>Ключ неверный.</strong> AI не прочитал все файлы, нарушил порядок или использует ключ от другой версии сайта. В текущей сборке проверяется ${cfg.total} файлов.`;
+          }
+        });
       };
 
       const injectAiEntry = () => {
@@ -149,11 +204,15 @@
         section.className = "ai-entry-section";
         section.innerHTML = `
           <h2>Работа с AI</h2>
-          <p>Qwen, Claude и GLM/Z.ai могут читать опубликованные материалы с телефона. Для ChatGPT есть отдельный вариант через проект и GitHub; ниже описаны агенты и неподдерживаемые приложения.</p>
+          <p>Подключение AI к материалам и отдельная проверка, действительно ли модель умеет читать все опубликованные файлы.</p>
           <div class="subject-grid">
             <a class="subject-card" href="#/doc/AI_FOR_USERS.md">
               <div class="subject-card-title">Открыть раздел «Работа с AI»</div>
-              <div class="subject-card-meta">Qwen · Claude · GLM/Z.ai · ChatGPT · агенты · совместимость</div>
+              <div class="subject-card-meta">Qwen · Claude · GLM/Z.ai · ChatGPT · агенты</div>
+            </a>
+            <a class="subject-card" href="#/doc/AI_TEST.md">
+              <div class="subject-card-title">Проверить полный доступ AI</div>
+              <div class="subject-card-meta">Все файлы · контрольные фрагменты · итоговый ключ</div>
             </a>
           </div>`;
         grid.insertAdjacentElement("afterend", section);
@@ -162,6 +221,7 @@
       const enhance = () => {
         injectAiEntry();
         enhanceUserAiPage();
+        enhanceAiTestPage();
       };
 
       new MutationObserver(enhance).observe(content, { childList: true, subtree: false });
