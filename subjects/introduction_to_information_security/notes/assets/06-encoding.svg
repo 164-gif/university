@@ -1,8 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 280" role="img" aria-labelledby="title desc">
-<title id="title">Шифрование и кодирование</title><desc id="desc">Шифрование — скрытие смысла; Кодирование — изменение формы</desc><rect width="100%" height="100%" fill="#f8fafc" rx="20"/>
-<text x="310" y="48" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700">Шифрование и кодирование</text>
-<rect x="36" y="90" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
-<text x="310" y="130" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Шифрование — скрытие смысла</text>
-<rect x="36" y="170" width="548" height="64" rx="14" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
-<text x="310" y="210" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Кодирование — изменение формы</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 227" role="img" aria-labelledby="title desc">
+<title id="title">Шифрование и кодирование</title>
+<desc id="desc">Шифрование — скрытие смысла; Кодирование — изменение формы</desc>
+<rect width="380" height="227" rx="16" fill="#f8fafc"/>
+<text x="190" y="27" text-anchor="middle" fill="#0f172a" font-family="Arial,DejaVu Sans,sans-serif" font-size="19" font-weight="700">Шифрование и кодирование</text>
+<rect x="18" y="75" width="344" height="56" rx="11" fill="#dff2fd" stroke="#0284c7" stroke-width="1.6"/>
+<text x="190" y="109" text-anchor="middle" font-family="Arial,DejaVu Sans,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">Шифрование — скрытие смысла</text>
+<rect x="18" y="144" width="344" height="56" rx="11" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
+<text x="190" y="178" text-anchor="middle" font-family="Arial,DejaVu Sans,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">Кодирование — изменение формы</text>
 </svg>
