@@ -8,6 +8,7 @@
   };
   const SECTION_NAMES = {
     overview: "Главная",
+    practice: "Практические работы",
     notes: "Конспекты",
     summaries: "Кратко",
     concepts: "Термины",
@@ -18,7 +19,7 @@
     laboratory_physics: "Лабораторные",
     root: "Общее",
   };
-  const SECTION_ORDER = ["overview", "notes", "summaries", "concepts", "exam", "laboratory_physics", "checks", "transcripts", "raw", "root"];
+  const SECTION_ORDER = ["overview", "notes", "summaries", "practice", "concepts", "exam", "laboratory_physics", "checks", "transcripts", "raw", "root"];
   const MEDIA_IMAGE = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif", "avif"]);
   const MEDIA_VIDEO = new Set(["mp4", "webm"]);
   const MEDIA_AUDIO = new Set(["mp3", "wav", "ogg", "m4a"]);
