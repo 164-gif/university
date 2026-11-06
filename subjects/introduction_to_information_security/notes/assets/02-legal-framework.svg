@@ -1,28 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 720">
-<style>
-text{font-family:Arial,sans-serif;fill:currentColor}
-.box{fill:none;stroke:currentColor;stroke-width:3;rx:14}
-.line{stroke:currentColor;stroke-width:3;fill:none}
-.label{font-size:24px}
-.small{font-size:19px}
-</style>
-<rect class="box" x="365" y="35" width="250" height="70"/>
-<text class="label" x="490" y="78" text-anchor="middle">Конституция РФ</text>
-<path class="line" d="M490 105 V145"/>
-<rect class="box" x="315" y="145" width="350" height="75"/>
-<text class="label" x="490" y="190" text-anchor="middle">Международные документы</text>
-<path class="line" d="M490 220 V260"/>
-<rect class="box" x="255" y="260" width="470" height="105"/>
-<text class="label" x="490" y="300" text-anchor="middle">Концептуальные документы</text>
-<text class="small" x="490" y="335" text-anchor="middle">(доктрины и документы по безопасности)</text>
-<path class="line" d="M490 365 V420 M490 420 H170 V465 M490 420 V465 M490 420 H810 V465"/>
-<rect class="box" x="65" y="465" width="210" height="75"/>
-<text class="label" x="170" y="510" text-anchor="middle">Законы</text>
-<rect class="box" x="385" y="465" width="210" height="75"/>
-<text class="label" x="490" y="510" text-anchor="middle">Кодексы</text>
-<rect class="box" x="680" y="465" width="260" height="75"/>
-<text class="label" x="810" y="495" text-anchor="middle">Организационные</text>
-<text class="label" x="810" y="525" text-anchor="middle">документы</text>
-<text class="small" x="490" y="620" text-anchor="middle">Схема восстановлена по рисунку 1000037486</text>
-<text class="small" x="490" y="650" text-anchor="middle">Не является актуальной юридической классификацией</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 696" role="img" aria-labelledby="title desc">
+<title id="title">Система правовой защиты</title><desc id="desc">Конституция РФ; Международные документы; Концептуальные документы; Законы; Кодексы; Организационные документы</desc><rect width="100%" height="100%" fill="#f8fafc" rx="20"/>
+<text x="310" y="48" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700">Система правовой защиты</text>
+<rect x="36" y="90" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="130" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Конституция РФ</text>
+<path d="M310 155 V177 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
+<rect x="36" y="186" width="548" height="64" rx="14" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="226" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Международные документы</text>
+<path d="M310 251 V273 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
+<rect x="36" y="282" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="322" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Концептуальные документы</text>
+<path d="M310 347 V369 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
+<rect x="36" y="378" width="548" height="64" rx="14" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="418" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Законы</text>
+<path d="M310 443 V465 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
+<rect x="36" y="474" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="514" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Кодексы</text>
+<path d="M310 539 V561 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
+<rect x="36" y="570" width="548" height="64" rx="14" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="610" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Организационные документы</text>
 </svg>
