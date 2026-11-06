@@ -234,11 +234,15 @@
     upgradeCallouts(contentEl);
     upgradeLinksAndMedia(contentEl, currentPath);
     addHeadingIds(contentEl);
+    // Retain source code blocks until Mermaid renders successfully.
+    // A missing or failing CDN must not leave empty diagrams.
+    const diagramFallbacks = [];
     for (const code of [...contentEl.querySelectorAll("pre > code.language-mermaid")]) {
       const pre = code.parentElement;
       const div = document.createElement("div");
       div.className = "mermaid";
       div.textContent = code.textContent;
+      diagramFallbacks.push({ div, original: pre.cloneNode(true) });
       pre.replaceWith(div);
     }
     if (window.renderMathInElement) {
@@ -246,10 +250,19 @@
         {left:"$$", right:"$$", display:true}, {left:"$", right:"$", display:false}
       ], throwOnError:false, strict:false });
     }
-    if (window.__mermaid && contentEl.querySelector(".mermaid")) {
-      const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "default";
-      window.__mermaid.initialize({ startOnLoad:false, securityLevel:"loose", theme });
-      try { await window.__mermaid.run({ nodes: contentEl.querySelectorAll(".mermaid") }); } catch (e) { console.warn(e); }
+    if (diagramFallbacks.length) {
+      if (window.__mermaid) {
+        try {
+          const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "default";
+          window.__mermaid.initialize({ startOnLoad:false, securityLevel:"loose", theme });
+          await window.__mermaid.run({ nodes: diagramFallbacks.map(({ div }) => div) });
+        } catch (e) {
+          console.warn("Diagram rendering failed; preserving readable text fallback", e);
+        }
+      }
+      for (const { div, original } of diagramFallbacks) {
+        if (!div.querySelector("svg")) div.replaceWith(original);
+      }
     }
     buildToc();
     if (requestedHeading) {
