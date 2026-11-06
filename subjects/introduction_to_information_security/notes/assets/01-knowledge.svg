@@ -1,16 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="620" height="448" viewBox="0 0 620 448" role="img" aria-labelledby="title desc">
-<title id="title">Проверяемость информации</title><desc id="desc">Традиция. Эксперимент. Проверяемость и повторяемость. Опыт и логика</desc>
-<rect width="620" height="448" rx="24" fill="#f8fafc"/>
-<text x="310" y="52" text-anchor="middle" font-family="Arial,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#0f172a">Проверяемость информации</text>
-<rect x="55" y="96" width="510" height="64" rx="13" fill="#e0f2fe" stroke="#60a5fa" stroke-width="1.5"/>
-<text x="310" y="135" text-anchor="middle" font-family="Arial,DejaVu Sans,sans-serif" font-size="22" font-weight="600" fill="#0f172a">Традиция</text>
-<path d="M310 160 V172" fill="none" stroke="#2563eb" stroke-width="3"/><path d="M303 165 L310 173 L317 165" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-<rect x="55" y="182" width="510" height="64" rx="13" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
-<text x="310" y="221" text-anchor="middle" font-family="Arial,DejaVu Sans,sans-serif" font-size="22" font-weight="600" fill="#0f172a">Эксперимент</text>
-<path d="M310 246 V258" fill="none" stroke="#2563eb" stroke-width="3"/><path d="M303 251 L310 259 L317 251" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-<rect x="55" y="268" width="510" height="64" rx="13" fill="#e0f2fe" stroke="#60a5fa" stroke-width="1.5"/>
-<text x="310" y="307" text-anchor="middle" font-family="Arial,DejaVu Sans,sans-serif" font-size="22" font-weight="600" fill="#0f172a">Проверяемость и повторяемость</text>
-<path d="M310 332 V344" fill="none" stroke="#2563eb" stroke-width="3"/><path d="M303 337 L310 345 L317 337" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-<rect x="55" y="354" width="510" height="64" rx="13" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
-<text x="310" y="393" text-anchor="middle" font-family="Arial,DejaVu Sans,sans-serif" font-size="22" font-weight="600" fill="#0f172a">Опыт и логика</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 360" role="img" aria-labelledby="title desc">
+<title id="title">Понятия из схемы</title><desc id="desc">Традиция и эксперимент; Проверяемость и повторяемость; Опыт и логика</desc><rect width="100%" height="100%" fill="#f8fafc" rx="20"/>
+<text x="310" y="48" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700">Понятия из схемы</text>
+<rect x="36" y="90" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="130" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Традиция и эксперимент</text>
+<rect x="36" y="170" width="548" height="64" rx="14" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="210" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Проверяемость и повторяемость</text>
+<rect x="36" y="250" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
+<text x="310" y="290" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Опыт и логика</text>
 </svg>
