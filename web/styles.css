@@ -2,7 +2,8 @@
 /* Reconstructed words are underlined consistently on the site. */
 .article u,.article ins{text-decoration-line:underline;text-decoration-style:solid;text-decoration-thickness:2px;text-underline-offset:3px}
 
-/* SVG lecture diagrams: scroll on narrow screens, tap opens original SVG. */
-.article p:has(> a > img[src$=".svg"]) { overflow-x:auto; max-width:100%; padding:8px 0; -webkit-overflow-scrolling:touch; }
-.article p > a > img[src$=".svg"] { display:block; width:100%; max-width:720px; height:auto; margin:0 auto; border:1px solid var(--border,#cbd5e1); border-radius:12px; background:#f8fafc; }
-@media(max-width:640px) { .article p > a > img[src$=".svg"] { min-width:520px; } }
+/* Responsive SVG diagrams: fit entirely within the article on mobile. */
+.article p:has(> a > img[src*=".svg"]) { max-width:100%; min-width:0; overflow:visible; padding:8px 0; }
+.article p > a:has(> img[src*=".svg"]) { display:block; width:100%; min-width:0; max-width:520px; margin-inline:auto; }
+.article p > a > img[src*=".svg"] { box-sizing:border-box; display:block; width:100%; min-width:0; max-width:100%; height:auto; margin:0 auto; padding:0; border:1px solid var(--border,#cbd5e1); border-radius:12px; background:#f8fafc; }
+@media(max-width:640px) { .article p > a:has(> img[src*=".svg"]) { max-width:100%; } }
