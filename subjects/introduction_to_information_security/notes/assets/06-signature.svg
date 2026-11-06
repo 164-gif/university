@@ -1,18 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 600" role="img" aria-labelledby="title desc">
-<title id="title">Проверка электронной подписи</title><desc id="desc">Сообщение; Подписание закрытым ключом; Сообщение и подпись; Проверка открытым ключом; Результат проверки</desc><rect width="100%" height="100%" fill="#f8fafc" rx="20"/>
-<text x="310" y="48" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700">Проверка электронной подписи</text>
-<rect x="36" y="90" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
-<text x="310" y="130" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Сообщение</text>
-<path d="M310 155 V177 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
-<rect x="36" y="186" width="548" height="64" rx="14" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
-<text x="310" y="226" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Подписание закрытым ключом</text>
-<path d="M310 251 V273 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
-<rect x="36" y="282" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
-<text x="310" y="322" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Сообщение и подпись</text>
-<path d="M310 347 V369 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
-<rect x="36" y="378" width="548" height="64" rx="14" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
-<text x="310" y="418" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Проверка открытым ключом</text>
-<path d="M310 443 V465 m-7-7 7 7 7-7" stroke="#0369a1" stroke-width="3" stroke-linecap="round" fill="none"/>
-<rect x="36" y="474" width="548" height="64" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
-<text x="310" y="514" fill="#0f172a" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="600">Результат проверки</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 549" role="img" aria-labelledby="title desc"><title id="title">Проверка электронной подписи</title><desc id="desc">Сообщение; Подписание закрытым ключом; Сообщение и подпись; Проверка открытым ключом; Результат проверки</desc><rect width="380" height="549" fill="#f8fafc" rx="16"/><text x="190" y="30" fill="#0f172a" text-anchor="middle" font-size="19" font-family="Arial,sans-serif" font-weight="700">Проверка электронной</text><text x="190" y="53" fill="#0f172a" text-anchor="middle" font-size="19" font-family="Arial,sans-serif" font-weight="700">подписи</text>
+<rect x="18" y="100" width="344" height="56" rx="11" fill="#dff2fd" stroke="#0284c7" stroke-width="1.6"/>
+<text x="190" y="134" text-anchor="middle" font-family="Arial,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">Сообщение</text>
+<path d="M190 158v16m-5-5 5 5 5-5" stroke="#0369a1" stroke-width="2.5" fill="none"/>
+<rect x="18" y="181" width="344" height="72" rx="11" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
+<text x="190" y="211" text-anchor="middle" font-family="Arial,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">Подписание закрытым</text>
+<text x="190" y="235" text-anchor="middle" font-family="Arial,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">ключом</text>
+<path d="M190 255v16m-5-5 5 5 5-5" stroke="#0369a1" stroke-width="2.5" fill="none"/>
+<rect x="18" y="278" width="344" height="56" rx="11" fill="#dff2fd" stroke="#0284c7" stroke-width="1.6"/>
+<text x="190" y="312" text-anchor="middle" font-family="Arial,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">Сообщение и подпись</text>
+<path d="M190 336v16m-5-5 5 5 5-5" stroke="#0369a1" stroke-width="2.5" fill="none"/>
+<rect x="18" y="359" width="344" height="72" rx="11" fill="#eff6ff" stroke="#0284c7" stroke-width="1.6"/>
+<text x="190" y="389" text-anchor="middle" font-family="Arial,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">Проверка открытым</text>
+<text x="190" y="413" text-anchor="middle" font-family="Arial,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">ключом</text>
+<path d="M190 433v16m-5-5 5 5 5-5" stroke="#0369a1" stroke-width="2.5" fill="none"/>
+<rect x="18" y="456" width="344" height="56" rx="11" fill="#dff2fd" stroke="#0284c7" stroke-width="1.6"/>
+<text x="190" y="490" text-anchor="middle" font-family="Arial,sans-serif" font-size="16.5" font-weight="600" fill="#0f172a">Результат проверки</text>
 </svg>
