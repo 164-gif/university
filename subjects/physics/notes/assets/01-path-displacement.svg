@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 530" role="img" aria-labelledby="title desc">
+<title id="title">Путь и перемещение точки</title>
+<desc id="desc">От A к B показана криволинейная траектория, её длина S и прямой вектор перемещения от A к B. Пунктиром показаны радиус-векторы из O.</desc>
+<rect width="960" height="530" fill="#fafdff"/>
+<g font-family="sans-serif" fill="#1b3254">
+<text x="40" y="47" font-size="30" font-weight="bold">Путь и перемещение</text>
+<path d="M160 393 C190 130 380 85 520 240 S725 410 825 145" fill="none" stroke="#1865ba" stroke-width="7" stroke-linecap="round"/>
+<path d="M160 393 L825 145" stroke="#bd4b2c" stroke-width="5" fill="none"/>
+<path d="M797 145 L825 145 L805 167" stroke="#bd4b2c" stroke-width="5" fill="none" stroke-linejoin="round"/>
+<path d="M80 473 L160 393 M80 473 L825 145" fill="none" stroke="#64748b" stroke-width="3" stroke-dasharray="8 8"/>
+<g fill="#153c70"><circle cx="160" cy="393" r="9"/><circle cx="825" cy="145" r="9"/><circle cx="80" cy="473" r="7"/></g>
+<text x="126" y="424" font-size="29">A</text><text x="835" y="135" font-size="29">B</text><text x="50" y="501" font-size="29">O</text>
+<text x="350" y="118" font-size="27" fill="#1865ba">траектория, путь S</text>
+<text x="425" y="325" font-size="27" fill="#a63a24">Δr = r − r₀</text>
+<text x="102" y="435" font-size="24">r₀</text><text x="442" y="412" font-size="24">r</text>
+</g></svg>
