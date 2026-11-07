@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 590" role="img" aria-labelledby="title desc">
+<title id="title">Разложение ускорения при криволинейном движении</title>
+<desc id="desc">В точке A на траектории касательная скорость и тангенциальное ускорение направлены вдоль касательной, нормальное ускорение направлено к центру кривизны O. Полное ускорение есть сумма составляющих.</desc>
+<rect width="900" height="590" fill="#fafcff"/>
+<path d="M90 460 C145 230 270 132 410 176 S625 305 770 110" fill="none" stroke="#1d5d9b" stroke-width="6"/>
+<path d="M300 169L480 204" stroke="#167c63" stroke-width="5" fill="none"/>
+<path d="M457 188L480 204L454 211" stroke="#167c63" stroke-width="5" fill="none"/>
+<path d="M300 169L400 398" stroke="#b64c3c" stroke-width="5" fill="none"/>
+<path d="M378 378L400 398L398 369" stroke="#b64c3c" stroke-width="5" fill="none"/>
+<path d="M300 169L580 325" stroke="#7750b5" stroke-width="5" fill="none" stroke-dasharray="10 5"/>
+<path d="M553 299L580 325L550 326" stroke="#7750b5" stroke-width="5" fill="none"/>
+<path d="M300 169L424 529" stroke="#8b929c" stroke-width="3" stroke-dasharray="10 9"/>
+<circle cx="300" cy="169" r="10" fill="#153c68"/><circle cx="424" cy="529" r="9" fill="#56667b"/>
+<g font-size="28" font-family="sans-serif" fill="#172d46">
+<text x="255" y="143">A</text><text x="440" y="553">O</text>
+<text x="482" y="187" fill="#167c63">v, aτ</text>
+<text x="404" y="403" fill="#b64c3c">aₙ</text>
+<text x="586" y="339" fill="#7750b5">a</text>
+<text x="75" y="66">Касательная и нормальная составляющие</text>
+<text x="70" y="548" font-size="23">O — центр кривизны</text></g>
+</svg>
