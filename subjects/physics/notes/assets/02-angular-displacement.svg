@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 610" role="img" aria-labelledby="title desc"><title id="title">Вращение точки вокруг оси и угловое перемещение</title><desc id="desc">Вертикальная ось вращения через O, окружность траектории радиуса R, точка A и дуга, соответствующая углу поворота. Угловая скорость направлена вдоль оси.</desc><rect width="900" height="610" fill="#fafcff"/>
+<ellipse cx="420" cy="337" rx="270" ry="112" fill="none" stroke="#245b94" stroke-width="6"/>
+<path d="M420 560V75" stroke="#34465d" stroke-width="5"/><path d="M405 99L420 75L435 99" stroke="#34465d" stroke-width="5" fill="none"/>
+<path d="M420 337L650 396" stroke="#16805d" stroke-width="5"/><path d="M624 376L650 396L620 407" stroke="#16805d" stroke-width="5" fill="none"/>
+<path d="M635 271Q709 305 680 362" fill="none" stroke="#ae4e35" stroke-width="5"/><path d="M679 337L680 362L699 345" stroke="#ae4e35" stroke-width="5" fill="none"/>
+<circle cx="420" cy="337" r="9" fill="#34465d"/><circle cx="650" cy="396" r="10" fill="#245b94"/>
+<g font-family="sans-serif" font-size="29" fill="#1a3354"><text x="442" y="330">O</text><text x="665" y="420">A</text><text x="525" y="345" fill="#16805d">R</text><text x="692" y="275" fill="#ae4e35">Δφ</text><text x="439" y="111">ω</text><text x="66" y="70">Ось вращения и угол поворота</text><text x="53" y="572" font-size="23">Модуль элементарного угла поворота равен Δφ.</text></g>
+</svg>
