@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 500" role="img" aria-labelledby="title desc">
+<title id="title">Угловое ускорение при разгоне и торможении</title>
+<desc id="desc">Две параллельные схемы вращения: при разгоне векторы угловой скорости и ускорения вдоль оси сонаправлены; при торможении они противоположны.</desc><rect width="940" height="500" fill="#fafcff"/>
+<g fill="none" stroke="#34465f" stroke-width="4"><path d="M270 410V85M670 410V85"/></g>
+<g fill="none" stroke="#2161a8" stroke-width="6" stroke-linecap="round"><path d="M250 325V145M238 165L250 145L262 165"/><path d="M650 325V145M638 165L650 145L662 165"/></g>
+<g fill="none" stroke="#ba4c3a" stroke-width="6" stroke-linecap="round"><path d="M290 325V145M278 165L290 145L302 165"/><path d="M690 140V320M678 300L690 320L702 300"/></g>
+<g font-family="sans-serif" fill="#18324f" font-size="29"><text x="110" y="55">Разгон: dω/dt &gt; 0</text><text x="535" y="55">Торможение: dω/dt &lt; 0</text><text x="205" y="370" fill="#2161a8">ω</text><text x="302" y="370" fill="#ba4c3a">ε</text><text x="606" y="370" fill="#2161a8">ω</text><text x="705" y="370" fill="#ba4c3a">ε</text><text x="110" y="465">ω и ε сонаправлены</text><text x="540" y="465">ω и ε противоположны</text></g></svg>
