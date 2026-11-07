@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="title desc">
+<title id="title">Разделы механики</title>
+<desc id="desc">Механика разделяется на три параллельных раздела: кинематику, динамику и статику.</desc>
+<rect width="960" height="500" fill="#fafcff"/>
+<rect x="320" y="35" width="320" height="95" rx="16" fill="#dbeafe" stroke="#1e40af" stroke-width="3"/>
+<text x="480" y="93" font-family="sans-serif" font-size="33" font-weight="bold" text-anchor="middle" fill="#122c55">Механика</text>
+<g stroke="#243d68" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M480 130 V183 H160 V225 M480 183 V225 M480 183 H800 V225"/>
+<path d="M149 212 L160 225 L171 212 M469 212 L480 225 L491 212 M789 212 L800 225 L811 212"/>
+</g>
+<g fill="#eef4ff" stroke="#647da7" stroke-width="3"><rect x="20" y="229" width="280" height="210" rx="14"/><rect x="340" y="229" width="280" height="210" rx="14"/><rect x="660" y="229" width="280" height="210" rx="14"/></g>
+<g font-family="sans-serif" fill="#15294a" text-anchor="middle"><text x="160" y="278" font-size="30" font-weight="bold">Кинематика</text><text x="480" y="278" font-size="30" font-weight="bold">Динамика</text><text x="800" y="278" font-size="30" font-weight="bold">Статика</text>
+<g font-size="23"><text x="160" y="323">Изучает движение</text><text x="160" y="357">без рассмотрения</text><text x="160" y="391">его причин</text>
+<text x="480" y="323">Изучает законы</text><text x="480" y="357">движения и его</text><text x="480" y="391">причины</text>
+<text x="800" y="323">Изучает законы</text><text x="800" y="357">равновесия</text><text x="800" y="391">тел</text></g></g>
+</svg>
