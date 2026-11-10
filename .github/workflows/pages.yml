@@ -28,10 +28,31 @@ jobs:
         with:
           enablement: true
 
+      - name: Check website JavaScript syntax
+        run: node --check web/app.js
+
       - name: Build static site
         env:
           UNIVERSITY_REQUIRE_GIT_DATES: '1'
         run: python3 web/build_site.py
+
+      - name: Verify formulas and edit dates
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('_site/content.json').read_text(encoding='utf-8'))
+          assert manifest.get('version', 0) >= 10
+          assert manifest.get('buildId')
+          docs = manifest['docs']
+          assert all(doc.get('lastModified') for doc in docs), 'Missing Git timestamps'
+          target = next(d for d in docs if d['path'].endswith('exam/Подготовка к коллоквиуму полная.md') and d['subject'] == 'analytical_geometry')
+          formula = r'\vec a\cdot\vec b=|\vec a|\cdot|\vec b|\cdot\cos(\vec a\wedge\vec b)'
+          assert formula in target['content'], 'Scalar product is missing'
+          assert '\n$\n' not in target['content'], 'Broken multiline math delimiter remains'
+          assert 'src="app.js?v=' in Path('_site/index.html').read_text(encoding='utf-8')
+          print('Math source, Git dates and versioned frontend: OK')
+          PY
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
