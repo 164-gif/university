@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -172,6 +173,13 @@ def main() -> None:
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
 
+    # Query-string versions prevent cached frontend assets from hiding UI updates.
+    build_id = hashlib.sha256(
+        (WEB / "app.js").read_bytes()
+        + (WEB / "styles.css").read_bytes()
+        + (WEB / "enhancements.css").read_bytes()
+    ).hexdigest()[:12]
+
     for name in (
         "index.html",
         "styles.css",
@@ -184,6 +192,13 @@ def main() -> None:
         "navigation-search.js",
     ):
         shutil.copy2(WEB / name, OUT / name)
+
+    index_path = OUT / "index.html"
+    html = index_path.read_text(encoding="utf-8")
+    html = html.replace('href="styles.css"', f'href="styles.css?v={build_id}"')
+    html = html.replace('href="enhancements.css"', f'href="enhancements.css?v={build_id}"')
+    html = html.replace('src="app.js"', f'src="app.js?v={build_id}"')
+    index_path.write_text(html, encoding="utf-8")
 
     docs = []
     assets = []
@@ -235,6 +250,15 @@ def main() -> None:
         elif suffix in ASSET_EXTS:
             copy_asset(path)
             assets.append(rel.as_posix())
+
+    if os.environ.get("UNIVERSITY_REQUIRE_GIT_DATES") == "1":
+        missing = [d["path"] for d in docs if not d["lastModified"]]
+        if missing:
+            raise RuntimeError(
+                f"Git modification dates missing for {len(missing)} documents; "
+                "check git history checkout (fetch-depth: 0). "
+                "Examples: " + ", ".join(missing[:5])
+            )
 
     study_docs = [d for d in docs if d["subject"] != "repository"]
 
@@ -369,7 +393,8 @@ def main() -> None:
 
     cohorts = [dict(c, documents=cohort_counts[c["id"]]) for c in COHORTS]
     manifest = {
-        "version": 9,
+        "version": 10,
+        "buildId": build_id,
         "repository": "164-gif/university",
         "defaultCohort": DEFAULT_COHORT,
         "cohorts": cohorts,
