@@ -74,6 +74,20 @@
     return String(value).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
   function escapeAttr(value) { return escapeHtml(value); }
+  function modifiedLabel(iso) {
+    if (!iso) return "Дата изменения недоступна";
+    const date = new Date(iso);
+    if (!Number.isFinite(date.getTime())) return "Дата изменения недоступна";
+    return new Intl.DateTimeFormat("ru-RU", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    }).format(date);
+  }
+  function modificationHtml(iso, label = "Последнее изменение") {
+    const formatted = modifiedLabel(iso);
+    const tooltip = iso ? "Время последнего изменения в Git, местное время вашего устройства" : "Нет данных о времени изменения в Git";
+    return `<div class="last-modified" title="${tooltip}"><span class="last-modified-label">${escapeHtml(label)}:</span> <time${iso ? ` datetime="${escapeAttr(iso)}"` : ""}>${escapeHtml(formatted)}</time></div>`;
+  }
   function slugify(value) {
     return value.toLowerCase().trim().replace(/<[^>]+>/g, "").replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "-").replace(/-+/g, "-") || "section";
   }
@@ -308,7 +322,7 @@
   function renderHome() {
     renderBreadcrumbs(null); tocEl.innerHTML = "";
     const cohorts = manifest.cohorts || [];
-    contentEl.innerHTML = `<div class="home-hero"><h1>University Notes</h1><div class="home-subtitle">Выбери набор материалов по году поступления и курсу.</div><div class="stats"><div class="stat">${manifest.stats.documents} документов</div><div class="stat">${cohorts.length} набора</div><div class="stat">светлая / тёмная тема</div></div></div><div class="subject-grid">${cohorts.map((c) => `<a class="subject-card" href="${cohortHref(c.id)}"><div class="subject-card-title">${escapeHtml(c.title)}</div><div class="subject-card-meta">${c.documents ? `${c.documents} материалов` : "Пока пусто"} · ${escapeHtml(c.description || "")}</div></a>`).join("")}</div>`;
+    contentEl.innerHTML = `<div class="home-hero"><h1>University Notes</h1><div class="home-subtitle">Выбери набор материалов по году поступления и курсу.</div><div class="stats"><div class="stat">${manifest.stats.documents} документов</div><div class="stat">${cohorts.length} набора</div><div class="stat">светлая / тёмная тема</div></div>${modificationHtml(docs.map((d) => d.lastModified).filter(Boolean).sort().at(-1) || null, "Последнее обновление материалов")}</div><div class="subject-grid">${cohorts.map((c) => `<a class="subject-card" href="${cohortHref(c.id)}"><div class="subject-card-title">${escapeHtml(c.title)}</div><div class="subject-card-meta">${c.documents ? `${c.documents} материалов` : "Пока пусто"} · ${escapeHtml(c.description || "")}</div></a>`).join("")}</div>`;
     updateActiveNav();
   }
 
@@ -338,6 +352,8 @@
     renderBreadcrumbs(doc);
     contentEl.innerHTML = preprocessMarkdown(doc.content, doc.path);
     if (!contentEl.querySelector("h1")) contentEl.insertAdjacentHTML("afterbegin", `<h1>${escapeHtml(doc.title)} <span class="file-badge">${escapeHtml(doc.ext)}</span></h1>`);
+    const mainHeading = contentEl.querySelector("h1");
+    if (mainHeading) mainHeading.insertAdjacentHTML("afterend", modificationHtml(doc.lastModified));
     await renderEnhancements(doc.path, heading);
     updateActiveNav();
     closeSidebar();
