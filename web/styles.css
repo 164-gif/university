@@ -14,3 +14,9 @@
 .last-modified-label{font-weight:500}
 .home-hero .last-modified{margin:15px 0 0}
 @media(max-width:800px){.last-modified{font-size:12px;margin:4px 0 18px}}
+
+/* KaTeX elements are created directly from preserved TeX tokens. */
+.math-source-display{display:block;max-width:100%;overflow-x:auto;overflow-y:hidden;padding:8px 0}
+.math-source-display .katex-display{margin:0.5em 0;overflow-x:auto;overflow-y:hidden;text-align:center}
+.math-source.math-fallback{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text)}
+.math-source-display.math-fallback{border:1px dashed var(--border);border-radius:8px;padding:9px 12px;text-align:left}
