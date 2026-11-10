@@ -7,3 +7,10 @@
 .article p > a:has(> img[src*=".svg"]) { display:block; width:100%; min-width:0; max-width:520px; margin-inline:auto; }
 .article p > a > img[src*=".svg"] { box-sizing:border-box; display:block; width:100%; min-width:0; max-width:100%; height:auto; margin:0 auto; padding:0; border:1px solid var(--border,#cbd5e1); border-radius:12px; background:#f8fafc; }
 @media(max-width:640px) { .article p > a:has(> img[src*=".svg"]) { max-width:100%; } }
+
+/* Commit timestamps are generated from Git history, not browser load time. */
+.last-modified{margin:4px 0 22px;color:var(--muted);font-size:13px;line-height:1.5;display:flex;gap:5px;align-items:baseline;flex-wrap:wrap}
+.last-modified time{font-variant-numeric:tabular-nums;color:var(--text)}
+.last-modified-label{font-weight:500}
+.home-hero .last-modified{margin:15px 0 0}
+@media(max-width:800px){.last-modified{font-size:12px;margin:4px 0 18px}}
