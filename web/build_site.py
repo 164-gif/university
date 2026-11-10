@@ -144,7 +144,7 @@ def read_root_text(name: str) -> str:
 def git_modification_times() -> dict[str, str]:
     """Last commit timestamps per tracked path; no fabricated filesystem timestamps."""
     command = [
-        "git", "-C", str(ROOT), "log",
+        "git", "-C", str(ROOT), "-c", "core.quotePath=false", "log",
         "--format=UNIVERSITY_COMMIT_DATE:%cI",
         "--name-only", "--diff-filter=AMR",
         "HEAD", "--", "subjects", "cohorts",
