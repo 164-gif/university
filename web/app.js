@@ -168,10 +168,12 @@
   function preprocessMarkdown(raw, currentPath) {
     let text = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
     const math = [];
-    text = text.replace(/\$\$[\s\S]*?\$\$|\$(?:\\.|[^$\n])+\$/g, (m) => {
-      const token = `@@UNIVMATH${math.length}@@`;
-      math.push(m);
-      return token;
+    // Keep TeX unchanged until KaTeX receives it. Avoid a second delimiter parser.
+    text = text.replace(/\$\$[\s\S]*?\$\$|\$(?:\\.|[^$\n])+\$/g, (source) => {
+      const index = math.length;
+      const display = source.startsWith("$$");
+      math.push({ expression: source.slice(display ? 2 : 1, display ? -2 : -1).trim(), display });
+      return "@@UNIVMATH" + index + "@@";
     });
     text = text.replace(/!\[\[([^\]]+)\]\]/g, (_, spec) => embedHtml(spec, currentPath));
     text = text.replace(/\[\[([^\]]+)\]\]/g, (_, spec) => {
@@ -179,11 +181,41 @@
       const target = split[0].trim();
       const label = (split.slice(1).join("|") || target.split("#")[0]).trim();
       const doc = resolveDoc(target, currentPath);
-      return doc ? `[${label}](${docHref(doc.path, doc.heading)})` : `<span class="broken-link">${escapeHtml(label)}</span>`;
+      return doc ? "[" + label + "](" + docHref(doc.path, doc.heading) + ")" : '<span class="broken-link">' + escapeHtml(label) + "</span>";
     });
-    let html = marked.parse(text);
-    html = html.replace(/@@UNIVMATH(\d+)@@/g, (_, n) => escapeHtml(math[Number(n)] || ""));
-    return html;
+    const html = marked.parse(text);
+    return html.replace(/@@UNIVMATH(\d+)@@/g, (_, n) => {
+      const value = math[Number(n)];
+      if (!value) return "";
+      return '<span class="math-source' + (value.display ? ' math-source-display' : '') +
+        '" data-tex="' + escapeAttr(value.expression) + '" data-display="' +
+        (value.display ? '1' : '0') + '"></span>';
+    });
+  }
+
+  function renderFormulas(root) {
+    for (const node of root.querySelectorAll(".math-source")) {
+      const tex = node.dataset.tex || "";
+      const display = node.dataset.display === "1";
+      if (!window.katex || typeof window.katex.render !== "function") {
+        node.textContent = (display ? "$$" : "$") + tex + (display ? "$$" : "$");
+        node.classList.add("math-fallback");
+        continue;
+      }
+      try {
+        window.katex.render(tex, node, {
+          displayMode: display,
+          throwOnError: true,
+          strict: "ignore",
+          trust: false,
+        });
+        node.removeAttribute("data-tex");
+      } catch (error) {
+        console.warn("Unable to render formula:", tex, error);
+        node.textContent = (display ? "$$" : "$") + tex + (display ? "$$" : "$");
+        node.classList.add("math-fallback");
+      }
+    }
   }
 
   function upgradeCallouts(root) {
@@ -261,11 +293,7 @@
       diagramFallbacks.push({ div, original: pre.cloneNode(true) });
       pre.replaceWith(div);
     }
-    if (window.renderMathInElement) {
-      renderMathInElement(contentEl, { delimiters: [
-        {left:"$$", right:"$$", display:true}, {left:"$", right:"$", display:false}
-      ], throwOnError:false, strict:false });
-    }
+    renderFormulas(contentEl);
     if (diagramFallbacks.length) {
       if (window.__mermaid) {
         try {
