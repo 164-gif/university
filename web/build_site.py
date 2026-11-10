@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import shutil
+import subprocess
 from pathlib import Path
 from urllib.parse import quote
 
@@ -138,6 +139,34 @@ def read_root_text(name: str) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+
+def git_modification_times() -> dict[str, str]:
+    """Last commit timestamps per tracked path; no fabricated filesystem timestamps."""
+    command = [
+        "git", "-C", str(ROOT), "log",
+        "--format=UNIVERSITY_COMMIT_DATE:%cI",
+        "--name-only", "--diff-filter=AMR",
+        "HEAD", "--", "subjects", "cohorts",
+        "README.md", "AI_FOR_USERS.md", "AI_COMPATIBILITY.md",
+        "AI_TEST.md", "AI_GUIDE.md", "AGENTS.md", "usethis.md",
+    ]
+    try:
+        output = subprocess.run(
+            command, capture_output=True, text=True, check=True, timeout=60
+        ).stdout
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return {}
+
+    timestamps: dict[str, str] = {}
+    commit_date = None
+    for line in output.splitlines():
+        if line.startswith("UNIVERSITY_COMMIT_DATE:"):
+            commit_date = line.partition(":")[2].strip()
+        elif line and commit_date and line not in timestamps:
+            timestamps[line] = commit_date
+    return timestamps
+
+
 def main() -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
@@ -158,6 +187,7 @@ def main() -> None:
 
     docs = []
     assets = []
+    modification_times = git_modification_times()
 
     roots = [ROOT / "subjects", ROOT / "cohorts"]
     for root_name in ("README.md", "AI_FOR_USERS.md", "AI_COMPATIBILITY.md", "AI_TEST.md", "AI_GUIDE.md", "AGENTS.md", "usethis.md"):
@@ -196,6 +226,7 @@ def main() -> None:
                 "ext": suffix[1:],
                 "content": text,
                 "meta": meta,
+                "lastModified": modification_times.get(rel_path),
                 "testFragment": fragment,
                 "aiFileId": file_id,
             })
