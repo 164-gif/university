@@ -338,7 +338,7 @@
       updateActiveNav();
       return;
     }
-    contentEl.innerHTML = `<div class="home-hero"><h1>${escapeHtml(cohort.title)}</h1><div class="home-subtitle">${escapeHtml(cohort.description || "")}</div><div class="stats"><div class="stat">${cohortDocs.length} материалов</div><div class="stat">${subjects.length} предметов</div></div></div><div class="subject-grid">${subjects.map(([key, list]) => { const entry = subjectEntry(list); return `<a class="subject-card" href="${docHref(entry.path)}"><div class="subject-card-title">${escapeHtml(subjectName(key))}</div><div class="subject-card-meta">${list.length} материалов · ${new Set(list.map(d=>d.section)).size} разделов</div></a>`; }).join("")}</div>`;
+    contentEl.innerHTML = `<div class="home-hero"><h1>${escapeHtml(cohort.title)}</h1><div class="home-subtitle">${escapeHtml(cohort.description || "")}</div><div class="stats"><div class="stat">${cohortDocs.length} материалов</div><div class="stat">${subjects.length} предметов</div></div>${modificationHtml(cohortDocs.map((d) => d.lastModified).filter(Boolean).sort().at(-1) || null, "Последнее обновление курса")}</div><div class="subject-grid">${subjects.map(([key, list]) => { const entry = subjectEntry(list); return `<a class="subject-card" href="${docHref(entry.path)}"><div class="subject-card-title">${escapeHtml(subjectName(key))}</div><div class="subject-card-meta">${list.length} материалов · ${new Set(list.map(d=>d.section)).size} разделов</div></a>`; }).join("")}</div>`;
     updateActiveNav();
   }
 
