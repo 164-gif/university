@@ -46,6 +46,13 @@ jobs:
           assert manifest.get('buildId')
           docs = manifest['docs']
           assert all(doc.get('lastModified') for doc in docs), 'Missing Git timestamps'
+          for path in [
+              'subjects/analytical_geometry/exam/Подготовка к коллоквиуму полная.md',
+              'subjects/analytical_geometry/notes/05 - Скалярное произведение.md',
+              'subjects/physics/README.md',
+          ]:
+              match = next((d for d in docs if d['path'] == path), None)
+              assert match and match.get('lastModified'), f'Unicode filename date unavailable: {path}'
           target = next(d for d in docs if d['path'].endswith('exam/Подготовка к коллоквиуму полная.md') and d['subject'] == 'analytical_geometry')
           formula = r'\vec a\cdot\vec b=|\vec a|\cdot|\vec b|\cdot\cos(\vec a\wedge\vec b)'
           assert formula in target['content'], 'Scalar product is missing'
