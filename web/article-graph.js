@@ -530,6 +530,8 @@ function edgeLine(a, b, color, width, curved, arrows = "none") {
     return null;
   }
   function showSubject(key) {
+    // Keep the default layout clear even after showing every inter-subject edge.
+    showLinks = false; linksControl.checked = false;
     activeGroup = key;
     mode = "subject"; scopeControl.value = mode;
     selectedPath = "";
