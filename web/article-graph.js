@@ -297,25 +297,33 @@ function build(data) {
       "suggested", COLORS[2]);
   }
 
-    function refresh() {
+  function refresh() {
     nodes = []; nodeById = new Map(); structure = [];
     if (mode === "subject") layoutSubject();
     else if (mode === "near") layoutNear();
     else layoutMap(mode === "cohort");
+
     const paths = new Set(nodes.filter(node => node.type === "doc").map(node => node.path));
     shownReferences = references.filter(([a, b]) => paths.has(a) && paths.has(b));
-    back.hidden = mode !== "subject";
-    linksControl.closest("label").hidden = mode !== "subject";
-    stats.textContent = nodes.filter(n => n.type === "doc").length
-      ? nodes.filter(n => n.type === "doc").length + " статей · " + shownReferences.length + " ссылок"
-      : groups.length + " предметов · выберите предмет для просмотра статей";
+
+    back.hidden = mode !== "subject" && mode !== "near";
+    linksLabel.hidden = mode === "near" ||
+      ((mode === "map" || mode === "cohort") && !crossGroups.length);
+    $(".graph-link-label").textContent = mode === "subject" ? "Все ссылки" : "Связи предметов";
+    suggestionsLabel.hidden = mode !== "subject";
+    const nDocs = paths.size;
+    const nSubjects = nodes.filter(node => node.type === "subject").length;
+    stats.textContent = mode === "near"
+      ? nDocs + " статей · направление ссылок и похожие темы"
+      : mode === "subject"
+        ? nDocs + " статей · " + shownReferences.length + " прямых ссылок"
+        : nSubjects + " предметов · " + crossGroups.length + " межпредметных связей";
     if (!nodeById.has(chosen)) chosen = "";
     resize();
     fit();
     updateDetails();
   }
-
-  function colors() {
+    function colors() {
     const style = getComputedStyle(document.documentElement);
     return {
       bg: style.getPropertyValue("--bg").trim() || "#ffffff",
@@ -352,20 +360,50 @@ function build(data) {
     return str.slice(0, low) + "…";
   }
   const center = node => ({ x: node.x + node.w / 2, y: node.y + node.h / 2 });
-  function edgeLine(a, b, color, width, curved) {
+function edgeLine(a, b, color, width, curved, arrows = "none") {
     if (!a || !b) return;
     const p = center(a), q = center(b);
+    let start = p, end = q, control1 = p, control2 = q;
     ctx.beginPath();
     if (curved && (mode === "subject" || mode === "near")) {
-      const startX = p.x < q.x ? p.x + a.w / 2 : p.x - a.w / 2;
-      const endX = p.x < q.x ? q.x - b.w / 2 : q.x + b.w / 2;
-      const middle = (startX + endX) / 2;
-      ctx.moveTo(startX, p.y);
-      ctx.bezierCurveTo(middle, p.y, middle, q.y, endX, q.y);
+      const dx = q.x - p.x, dy = q.y - p.y;
+      if (Math.abs(dx) >= Math.abs(dy) * .75) {
+        const sign = dx >= 0 ? 1 : -1;
+        start = { x: p.x + sign * a.w / 2, y: p.y };
+        end = { x: q.x - sign * b.w / 2, y: q.y };
+        const middle = (start.x + end.x) / 2;
+        control1 = { x: middle, y: start.y };
+        control2 = { x: middle, y: end.y };
+      } else {
+        const sign = dy >= 0 ? 1 : -1;
+        start = { x: p.x, y: p.y + sign * a.h / 2 };
+        end = { x: q.x, y: q.y - sign * b.h / 2 };
+        const middle = (start.y + end.y) / 2;
+        control1 = { x: start.x, y: middle };
+        control2 = { x: end.x, y: middle };
+      }
+      ctx.moveTo(start.x, start.y);
+      ctx.bezierCurveTo(control1.x, control1.y, control2.x, control2.y, end.x, end.y);
     } else {
-      ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(q.x, q.y);
     }
     ctx.lineWidth = width; ctx.strokeStyle = color; ctx.stroke();
+    if (arrows === "none") return;
+
+    const drawTip = (tip, before) => {
+      const angle = Math.atan2(tip.y - before.y, tip.x - before.x);
+      const length = 8;
+      ctx.beginPath();
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(tip.x - length * Math.cos(angle - .45), tip.y - length * Math.sin(angle - .45));
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(tip.x - length * Math.cos(angle + .45), tip.y - length * Math.sin(angle + .45));
+      ctx.lineWidth = Math.max(1.5, width);
+      ctx.strokeStyle = color; ctx.stroke();
+    };
+    drawTip(end, control2);
+    if (arrows === "both") drawTip(start, control1);
   }
   function render() {
     if (panel.hidden) return;
@@ -375,32 +413,69 @@ function build(data) {
     ctx.translate(ox, oy);
     ctx.scale(scale, scale);
     const focus = chosen.startsWith("doc:") ? chosen.slice(4) : selectedPath;
+    const hoveredPath = hovered.startsWith("doc:") ? hovered.slice(4) : "";
     const related = adjacency.get(focus) || new Set();
+    const likely = new Set((suggestions.get(focus) || []).map(entry => entry.path));
 
+    // Structure and citations use different styles. Arrows are shown in local mode.
     for (const line of structure) {
       const a = nodeById.get(line.from), b = nodeById.get(line.to);
-      const color = line.type === "reference" ? "#50b8a4" : c.border;
-      edgeLine(a, b, color, line.type === "reference" ? 1.8 : 1.5, true);
+      if (line.type === "suggested") {
+        ctx.save();
+        ctx.setLineDash([6, 6]);
+        edgeLine(a, b, "#9a71cb", 1.5, true);
+        ctx.restore();
+      } else {
+        const isLink = line.type === "reference" || line.type === "mutual";
+        edgeLine(a, b, isLink ? "#25a895" : c.border, isLink ? 1.8 : 1.5, true,
+          line.type === "mutual" ? "both" : line.type === "reference" ? "end" : "none");
+      }
     }
+
     if (mode === "subject") {
       for (const [from, to] of shownReferences) {
-        const emphasized = from === focus || to === focus || from === hovered.slice(4) || to === hovered.slice(4);
+        const emphasized = from === focus || to === focus ||
+          from === hoveredPath || to === hoveredPath;
         if (showLinks || emphasized) {
           edgeLine(nodeById.get(docId(from)), nodeById.get(docId(to)),
-            emphasized ? "#25a895" : "rgba(96,139,184,.35)", emphasized ? 2.5 : 1, true);
+            emphasized ? "#25a895" : "rgba(96,139,184,.38)", emphasized ? 2.3 : 1, true);
         }
       }
+      if (showSuggestions && focus) {
+        ctx.save(); ctx.setLineDash([6, 7]);
+        for (const item of suggestions.get(focus) || []) {
+          if (nodeById.has(docId(item.path))) {
+            edgeLine(nodeById.get(docId(focus)), nodeById.get(docId(item.path)),
+              "#9a71cb", 1.6, true);
+          }
+        }
+        ctx.restore();
+      }
+    } else if (mode === "map" || mode === "cohort") {
+      ctx.save(); ctx.setLineDash([5, 8]);
+      for (const item of crossGroups) {
+        const a = groupId(item.a), b = groupId(item.b);
+        if (!nodeById.has(a) || !nodeById.has(b)) continue;
+        const highlighted = hovered === a || hovered === b || chosen === a || chosen === b;
+        if (showLinks || highlighted) {
+          edgeLine(nodeById.get(a), nodeById.get(b),
+            highlighted ? "#25a895" : "rgba(96,139,184,.34)", highlighted ? 2.3 : 1.2, false);
+        }
+      }
+      ctx.restore();
     }
 
     for (const node of nodes) {
       const active = chosen === node.id || hovered === node.id;
       const relatedDoc = node.path && related.has(node.path);
+      const similarDoc = showSuggestions && node.path && likely.has(node.path);
       const tint = node.color || c.accent;
       rounded(node.x, node.y, node.w, node.h, node.type === "hub" ? 19 : node.type === "subject" ? 12 : 8);
       ctx.fillStyle = active ? c.secondary : c.panel;
       ctx.fill();
       ctx.lineWidth = active ? 2.4 : node.type === "doc" ? 1.1 : 1.6;
-      ctx.strokeStyle = active ? c.accent : relatedDoc ? "#25a895" : node.type === "hub" ? c.accent : node.type === "subject" || node.type === "section" ? tint : c.border;
+      ctx.strokeStyle = active ? c.accent : relatedDoc ? "#25a895" : similarDoc ? "#9a71cb" :
+        node.type === "hub" ? c.accent : node.type === "subject" || node.type === "section" ? tint : c.border;
       ctx.stroke();
       if (node.type !== "hub" && node.type !== "label") {
         ctx.fillStyle = tint;
@@ -421,7 +496,7 @@ function build(data) {
     }
     ctx.restore();
   }
-  function requestRender() {
+    function requestRender() {
     if (pendingFrame) return;
     pendingFrame = requestAnimationFrame(() => { pendingFrame = 0; render(); });
   }
