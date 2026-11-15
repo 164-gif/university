@@ -37,11 +37,12 @@
           '<option value="cohort">Предметы моего курса</option><option value="near">Связи текущей статьи</option>' +
         '</select>' +
         '<button class="graph-back" type="button" hidden>← Все предметы</button>' +
-        '<label class="graph-links"><input type="checkbox" class="graph-show-links"> Все ссылки</label>' +
+        '<label class="graph-links"><input type="checkbox" class="graph-show-links"> <span class="graph-link-label">Связи предметов</span></label>' +
+        '<label class="graph-suggestions"><input type="checkbox" class="graph-show-suggestions"> Похожие темы</label>' +
         '<button class="graph-fit" type="button" title="Вписать граф в окно">Вписать</button>' +
       '</div>' +
       '<div class="graph-area"><canvas class="graph-canvas" aria-label="Карта знаний: выберите узел для просмотра. Двойной щелчок открывает статью."></canvas>' +
-        '<div class="graph-legend">Сплошные линии — структура предметов · Цветные линии — ссылки между статьями</div>' +
+        '<div class="graph-legend">Серые — структура · Бирюзовые — реальные ссылки · Фиолетовый пунктир — похожие темы</div>' +
         '<div class="graph-tips">Колесо — масштаб · Перетаскивание — перемещение · Двойной щелчок — открыть статью</div>' +
       '</div><aside class="graph-details" aria-live="polite"></aside></div>';
   document.body.append(root);
@@ -50,6 +51,7 @@
   const panel = $(".graph-panel"), canvas = $(".graph-canvas"), ctx = canvas.getContext("2d");
   const search = $(".graph-search"), scopeControl = $(".graph-scope"), details = $(".graph-details");
   const stats = $(".graph-stats"), back = $(".graph-back"), linksControl = $(".graph-show-links");
+  const suggestionsControl = $(".graph-show-suggestions"), linksLabel = $(".graph-links"), suggestionsLabel = $(".graph-suggestions");
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const norm = path => String(path || "").replace(/\\/g, "/").split("/").reduce((parts, part) => {
@@ -72,57 +74,27 @@
   };
 
   let docs = [], byPath = new Map(), references = [], adjacency = new Map(), groups = [];
+  let incoming = new Map(), outgoing = new Map(), suggestions = new Map(), unresolved = new Map(), crossGroups = [];
   let mode = "map", activeGroup = "", selectedPath = "", chosen = "", hovered = "";
   let nodes = [], nodeById = new Map(), structure = [], shownReferences = [];
-  let query = "", showLinks = false, scale = 1, ox = 0, oy = 0, w = 1, h = 1, dragging = null;
+  let query = "", showLinks = false, showSuggestions = false, scale = 1, ox = 0, oy = 0, w = 1, h = 1, dragging = null;
   let previousFocus = null;
   let pendingFrame = 0;
 
-  function resolveDoc(input, source) {
-    let raw = input.trim().split("|")[0].split("#")[0];
-    try { raw = decodeURIComponent(raw); } catch {}
-    raw = raw.replace(/\.(md|txt)$/i, "");
-    if (!raw) return null;
-    const srcParts = source.split("/");
-    const dir = source.slice(0, source.lastIndexOf("/"));
-    const subjectRoot = srcParts[0] === "cohorts" ? srcParts.slice(0, 4).join("/") : srcParts.slice(0, 2).join("/");
-    const guesses = raw.includes("/") ? [norm(dir + "/" + raw), norm(raw), norm(subjectRoot + "/" + raw)] : [];
-    for (const guess of guesses) {
-      for (const candidate of [guess, guess + ".md", guess + ".txt"]) {
-        if (byPath.has(candidate)) return candidate;
-      }
-    }
-    const matches = docs.filter(doc =>
-      stem(doc.path).toLocaleLowerCase("ru") === raw.toLocaleLowerCase("ru") ||
-      doc.title.toLocaleLowerCase("ru") === raw.toLocaleLowerCase("ru"));
-    const current = byPath.get(source);
-    return (matches.find(doc => doc.cohort === current?.cohort && doc.subject === current?.subject) ||
-      matches.find(doc => doc.cohort === current?.cohort) || matches[0])?.path || null;
-  }
-
-  function build(data) {
+function build(data) {
     docs = (data.docs || []).filter(doc => doc.subject !== "repository");
     byPath = new Map(docs.map(doc => [norm(doc.path), doc]));
-    adjacency = new Map(docs.map(doc => [doc.path, new Set()]));
-    const seen = new Set();
-    for (const doc of docs) {
-      const text = doc.content || "";
-      const targets = [];
-      for (const match of text.matchAll(/(?<!!)\[\[([^\]\n]+)\]\]/g)) targets.push(match[1]);
-      for (const match of text.matchAll(/(?<!!)\[[^\]\n]+\]\(([^)\n]+)\)/g)) {
-        if (/\.(md|txt)(?:#.*)?$/i.test(match[1])) targets.push(match[1]);
-      }
-      for (const target of targets) {
-        const other = resolveDoc(target, doc.path);
-        if (!other || other === doc.path || !byPath.has(other)) continue;
-        const id = [doc.path, other].sort().join("\0");
-        if (seen.has(id)) continue;
-        seen.add(id);
-        references.push([doc.path, other]);
-        adjacency.get(doc.path).add(other);
-        adjacency.get(other).add(doc.path);
-      }
-    }
+    const analyzer = window.UniversityRelations;
+    if (!analyzer) throw new Error("Модуль связей не загрузился");
+    const result = analyzer.buildRelationships(docs);
+    references = result.references;
+    adjacency = result.adjacency;
+    incoming = result.incoming;
+    outgoing = result.outgoing;
+    suggestions = result.suggestions;
+    unresolved = result.unresolved;
+    crossGroups = result.crossGroups;
+
     const index = new Map();
     for (const doc of docs) {
       const key = groupKey(doc);
@@ -135,7 +107,7 @@
       collator.compare(a.cohort, b.cohort) || collator.compare(a.label, b.label));
   }
 
-  function addNode(node) {
+    function addNode(node) {
     nodes.push(node);
     nodeById.set(node.id, node);
   }
@@ -248,50 +220,84 @@
     }
   }
 
-  // Explicit inbound/outbound references form two neat lanes in local view.
+// Actual references keep their directions; thematic suggestions have a separate lane.
   function layoutNear() {
     const focus = byPath.get(selectedPath) || byPath.get(activePath());
     if (!focus) { layoutMap(); return; }
     selectedPath = focus.path;
-    const inbound = [], outbound = [];
-    for (const [from, to] of references) {
-      if (from === focus.path) outbound.push(to);
-      else if (to === focus.path) inbound.push(from);
-    }
-    const fromSet = new Set(inbound), toSet = new Set(outbound);
-    const left = [...fromSet].sort((a, b) => collator.compare(byPath.get(a).title, byPath.get(b).title));
-    const right = [...toSet].filter(path => !fromSet.has(path))
+    const received = incoming.get(focus.path) || new Set();
+    const sent = outgoing.get(focus.path) || new Set();
+    const visible = path => {
+      const doc = byPath.get(path);
+      return doc && (!query || filteredDocs([doc]).length);
+    };
+    const sortPaths = paths => [...paths].filter(visible)
       .sort((a, b) => collator.compare(byPath.get(a).title, byPath.get(b).title));
+    const incomingOnly = sortPaths([...received].filter(path => !sent.has(path)));
+    const outgoingOnly = sortPaths([...sent].filter(path => !received.has(path)));
+    const mutual = sortPaths([...received].filter(path => sent.has(path)));
+    const relatedTopics = (suggestions.get(focus.path) || [])
+      .filter(entry => visible(entry.path));
+
     addNode({
-      id: docId(focus.path), type: "doc", path: focus.path, title: focus.title, subtitle: "",
-      x: -116, y: -23, w: 232, h: 46, color: COLORS[0]
+      id: docId(focus.path), type: "doc", path: focus.path,
+      title: focus.title, subtitle: "Текущая статья", color: COLORS[0],
+      x: -122, y: -29, w: 244, h: 58
     });
-    [
-      { paths: left, x: -505, name: "Ссылаются на статью" },
-      { paths: right, x: 280, name: "Ссылки из статьи" }
-    ].forEach((lane, laneIndex) => {
-      if (!lane.paths.length) return;
+
+    const sideLane = (paths, key, title, x, inboundSide) => {
+      if (!paths.length) return;
+      const total = paths.length * 49;
       addNode({
-        id: "lane:" + laneIndex, type: "label", title: lane.name, subtitle: "",
-        x: lane.x, y: -Math.max(150, lane.paths.length * 25) - 53, w: 230, h: 38
+        id: "lane:" + key, type: "label", title, subtitle: "",
+        x, y: -total / 2 - 54, w: 245, h: 36
       });
-      const height = lane.paths.length * 46;
-      lane.paths.forEach((path, index) => {
-        const doc = byPath.get(path);
-        if (!doc || (query && !filteredDocs([doc]).length)) return;
+      paths.forEach((path, index) => {
+        const doc = byPath.get(path), id = docId(path);
         addNode({
-          id: docId(path), type: "doc", path, groupKey: groupKey(doc),
+          id, type: "doc", path, groupKey: groupKey(doc),
           title: doc.title, subtitle: subjectName(doc.subject),
-          x: lane.x, y: index * 46 - height / 2, w: 232, h: 39,
-          color: COLORS[laneIndex + 1]
+          x, y: -total / 2 + index * 49, w: 245, h: 43,
+          color: inboundSide ? COLORS[1] : COLORS[4]
         });
-        link(laneIndex === 0 ? docId(path) : docId(focus.path),
-          laneIndex === 0 ? docId(focus.path) : docId(path), "reference");
+        link(inboundSide ? id : docId(focus.path),
+          inboundSide ? docId(focus.path) : id, "reference");
       });
-    });
+    };
+    sideLane(incomingOnly, "in", "Ссылаются на статью", -565, true);
+    sideLane(outgoingOnly, "out", "Статья ссылается на", 325, false);
+
+    const lowerStart = Math.max(incomingOnly.length, outgoingOnly.length) * 49 / 2 + 105;
+    const bottomLane = (paths, key, title, y, edgeType, color) => {
+      if (!paths.length) return 0;
+      const columns = Math.min(3, paths.length);
+      const rows = Math.ceil(paths.length / columns);
+      const areaWidth = columns * 255;
+      addNode({
+        id: "lane:" + key, type: "label", title, subtitle: "",
+        x: -areaWidth / 2, y, w: areaWidth, h: 38
+      });
+      paths.forEach((item, index) => {
+        const path = typeof item === "string" ? item : item.path;
+        const doc = byPath.get(path), id = docId(path), column = index % columns;
+        const row = Math.floor(index / columns);
+        addNode({
+          id, type: "doc", path, groupKey: groupKey(doc),
+          title: doc.title,
+          subtitle: edgeType === "suggested" ? "Похоже по названию, не ссылка" : "Двусторонняя ссылка",
+          x: -areaWidth / 2 + column * 255, y: y + 45 + row * 51,
+          w: 242, h: 45, color
+        });
+        link(docId(focus.path), id, edgeType);
+      });
+      return 45 + rows * 51;
+    };
+    const mutualHeight = bottomLane(mutual, "mutual", "Взаимные ссылки", lowerStart, "mutual", COLORS[1]);
+    bottomLane(relatedTopics, "suggested", "Похожие темы · предположение", lowerStart + mutualHeight + (mutualHeight ? 45 : 0),
+      "suggested", COLORS[2]);
   }
 
-  function refresh() {
+    function refresh() {
     nodes = []; nodeById = new Map(); structure = [];
     if (mode === "subject") layoutSubject();
     else if (mode === "near") layoutNear();
