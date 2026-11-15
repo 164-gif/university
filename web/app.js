@@ -2,6 +2,7 @@
   const SUBJECT_NAMES = {
     physics: "Физика",
     analytical_geometry: "Аналитическая геометрия",
+    mathematical_analysis: "Математический анализ",
     obzh: "ОБЖ / БЖД",
     introduction_to_information_security: "Введение в информационную безопасность",
     information_security_fundamentals: "Основы информационной безопасности",
