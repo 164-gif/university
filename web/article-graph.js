@@ -37,11 +37,12 @@
           '<option value="cohort">Предметы моего курса</option><option value="near">Связи текущей статьи</option>' +
         '</select>' +
         '<button class="graph-back" type="button" hidden>← Все предметы</button>' +
-        '<label class="graph-links"><input type="checkbox" class="graph-show-links"> Все ссылки</label>' +
+        '<label class="graph-links"><input type="checkbox" class="graph-show-links"> <span class="graph-link-label">Связи предметов</span></label>' +
+        '<label class="graph-suggestions"><input type="checkbox" class="graph-show-suggestions"> Похожие темы</label>' +
         '<button class="graph-fit" type="button" title="Вписать граф в окно">Вписать</button>' +
       '</div>' +
       '<div class="graph-area"><canvas class="graph-canvas" aria-label="Карта знаний: выберите узел для просмотра. Двойной щелчок открывает статью."></canvas>' +
-        '<div class="graph-legend">Сплошные линии — структура предметов · Цветные линии — ссылки между статьями</div>' +
+        '<div class="graph-legend">Серые — структура · Бирюзовые — реальные ссылки · Фиолетовый пунктир — похожие темы</div>' +
         '<div class="graph-tips">Колесо — масштаб · Перетаскивание — перемещение · Двойной щелчок — открыть статью</div>' +
       '</div><aside class="graph-details" aria-live="polite"></aside></div>';
   document.body.append(root);
@@ -50,6 +51,7 @@
   const panel = $(".graph-panel"), canvas = $(".graph-canvas"), ctx = canvas.getContext("2d");
   const search = $(".graph-search"), scopeControl = $(".graph-scope"), details = $(".graph-details");
   const stats = $(".graph-stats"), back = $(".graph-back"), linksControl = $(".graph-show-links");
+  const suggestionsControl = $(".graph-show-suggestions"), linksLabel = $(".graph-links"), suggestionsLabel = $(".graph-suggestions");
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const norm = path => String(path || "").replace(/\\/g, "/").split("/").reduce((parts, part) => {
@@ -72,57 +74,27 @@
   };
 
   let docs = [], byPath = new Map(), references = [], adjacency = new Map(), groups = [];
+  let incoming = new Map(), outgoing = new Map(), suggestions = new Map(), unresolved = new Map(), crossGroups = [];
   let mode = "map", activeGroup = "", selectedPath = "", chosen = "", hovered = "";
   let nodes = [], nodeById = new Map(), structure = [], shownReferences = [];
-  let query = "", showLinks = false, scale = 1, ox = 0, oy = 0, w = 1, h = 1, dragging = null;
+  let query = "", showLinks = false, showSuggestions = false, scale = 1, ox = 0, oy = 0, w = 1, h = 1, dragging = null;
   let previousFocus = null;
   let pendingFrame = 0;
 
-  function resolveDoc(input, source) {
-    let raw = input.trim().split("|")[0].split("#")[0];
-    try { raw = decodeURIComponent(raw); } catch {}
-    raw = raw.replace(/\.(md|txt)$/i, "");
-    if (!raw) return null;
-    const srcParts = source.split("/");
-    const dir = source.slice(0, source.lastIndexOf("/"));
-    const subjectRoot = srcParts[0] === "cohorts" ? srcParts.slice(0, 4).join("/") : srcParts.slice(0, 2).join("/");
-    const guesses = raw.includes("/") ? [norm(dir + "/" + raw), norm(raw), norm(subjectRoot + "/" + raw)] : [];
-    for (const guess of guesses) {
-      for (const candidate of [guess, guess + ".md", guess + ".txt"]) {
-        if (byPath.has(candidate)) return candidate;
-      }
-    }
-    const matches = docs.filter(doc =>
-      stem(doc.path).toLocaleLowerCase("ru") === raw.toLocaleLowerCase("ru") ||
-      doc.title.toLocaleLowerCase("ru") === raw.toLocaleLowerCase("ru"));
-    const current = byPath.get(source);
-    return (matches.find(doc => doc.cohort === current?.cohort && doc.subject === current?.subject) ||
-      matches.find(doc => doc.cohort === current?.cohort) || matches[0])?.path || null;
-  }
-
-  function build(data) {
+function build(data) {
     docs = (data.docs || []).filter(doc => doc.subject !== "repository");
     byPath = new Map(docs.map(doc => [norm(doc.path), doc]));
-    adjacency = new Map(docs.map(doc => [doc.path, new Set()]));
-    const seen = new Set();
-    for (const doc of docs) {
-      const text = doc.content || "";
-      const targets = [];
-      for (const match of text.matchAll(/(?<!!)\[\[([^\]\n]+)\]\]/g)) targets.push(match[1]);
-      for (const match of text.matchAll(/(?<!!)\[[^\]\n]+\]\(([^)\n]+)\)/g)) {
-        if (/\.(md|txt)(?:#.*)?$/i.test(match[1])) targets.push(match[1]);
-      }
-      for (const target of targets) {
-        const other = resolveDoc(target, doc.path);
-        if (!other || other === doc.path || !byPath.has(other)) continue;
-        const id = [doc.path, other].sort().join("\0");
-        if (seen.has(id)) continue;
-        seen.add(id);
-        references.push([doc.path, other]);
-        adjacency.get(doc.path).add(other);
-        adjacency.get(other).add(doc.path);
-      }
-    }
+    const analyzer = window.UniversityRelations;
+    if (!analyzer) throw new Error("Модуль связей не загрузился");
+    const result = analyzer.buildRelationships(docs);
+    references = result.references;
+    adjacency = result.adjacency;
+    incoming = result.incoming;
+    outgoing = result.outgoing;
+    suggestions = result.suggestions;
+    unresolved = result.unresolved;
+    crossGroups = result.crossGroups;
+
     const index = new Map();
     for (const doc of docs) {
       const key = groupKey(doc);
@@ -135,7 +107,7 @@
       collator.compare(a.cohort, b.cohort) || collator.compare(a.label, b.label));
   }
 
-  function addNode(node) {
+    function addNode(node) {
     nodes.push(node);
     nodeById.set(node.id, node);
   }
@@ -248,47 +220,81 @@
     }
   }
 
-  // Explicit inbound/outbound references form two neat lanes in local view.
+// Actual references keep their directions; thematic suggestions have a separate lane.
   function layoutNear() {
     const focus = byPath.get(selectedPath) || byPath.get(activePath());
     if (!focus) { layoutMap(); return; }
     selectedPath = focus.path;
-    const inbound = [], outbound = [];
-    for (const [from, to] of references) {
-      if (from === focus.path) outbound.push(to);
-      else if (to === focus.path) inbound.push(from);
-    }
-    const fromSet = new Set(inbound), toSet = new Set(outbound);
-    const left = [...fromSet].sort((a, b) => collator.compare(byPath.get(a).title, byPath.get(b).title));
-    const right = [...toSet].filter(path => !fromSet.has(path))
+    const received = incoming.get(focus.path) || new Set();
+    const sent = outgoing.get(focus.path) || new Set();
+    const visible = path => {
+      const doc = byPath.get(path);
+      return doc && (!query || filteredDocs([doc]).length);
+    };
+    const sortPaths = paths => [...paths].filter(visible)
       .sort((a, b) => collator.compare(byPath.get(a).title, byPath.get(b).title));
+    const incomingOnly = sortPaths([...received].filter(path => !sent.has(path)));
+    const outgoingOnly = sortPaths([...sent].filter(path => !received.has(path)));
+    const mutual = sortPaths([...received].filter(path => sent.has(path)));
+    const relatedTopics = (suggestions.get(focus.path) || [])
+      .filter(entry => visible(entry.path));
+
     addNode({
-      id: docId(focus.path), type: "doc", path: focus.path, title: focus.title, subtitle: "",
-      x: -116, y: -23, w: 232, h: 46, color: COLORS[0]
+      id: docId(focus.path), type: "doc", path: focus.path,
+      title: focus.title, subtitle: "Текущая статья", color: COLORS[0],
+      x: -122, y: -29, w: 244, h: 58
     });
-    [
-      { paths: left, x: -505, name: "Ссылаются на статью" },
-      { paths: right, x: 280, name: "Ссылки из статьи" }
-    ].forEach((lane, laneIndex) => {
-      if (!lane.paths.length) return;
+
+    const sideLane = (paths, key, title, x, inboundSide) => {
+      if (!paths.length) return;
+      const total = paths.length * 49;
       addNode({
-        id: "lane:" + laneIndex, type: "label", title: lane.name, subtitle: "",
-        x: lane.x, y: -Math.max(150, lane.paths.length * 25) - 53, w: 230, h: 38
+        id: "lane:" + key, type: "label", title, subtitle: "",
+        x, y: -total / 2 - 54, w: 245, h: 36
       });
-      const height = lane.paths.length * 46;
-      lane.paths.forEach((path, index) => {
-        const doc = byPath.get(path);
-        if (!doc || (query && !filteredDocs([doc]).length)) return;
+      paths.forEach((path, index) => {
+        const doc = byPath.get(path), id = docId(path);
         addNode({
-          id: docId(path), type: "doc", path, groupKey: groupKey(doc),
+          id, type: "doc", path, groupKey: groupKey(doc),
           title: doc.title, subtitle: subjectName(doc.subject),
-          x: lane.x, y: index * 46 - height / 2, w: 232, h: 39,
-          color: COLORS[laneIndex + 1]
+          x, y: -total / 2 + index * 49, w: 245, h: 43,
+          color: inboundSide ? COLORS[1] : COLORS[4]
         });
-        link(laneIndex === 0 ? docId(path) : docId(focus.path),
-          laneIndex === 0 ? docId(focus.path) : docId(path), "reference");
+        link(inboundSide ? id : docId(focus.path),
+          inboundSide ? docId(focus.path) : id, "reference");
       });
-    });
+    };
+    sideLane(incomingOnly, "in", "Ссылаются на статью", -565, true);
+    sideLane(outgoingOnly, "out", "Статья ссылается на", 325, false);
+
+    const lowerStart = Math.max(incomingOnly.length, outgoingOnly.length) * 49 / 2 + 105;
+    const bottomLane = (paths, key, title, y, edgeType, color) => {
+      if (!paths.length) return 0;
+      const columns = Math.min(3, paths.length);
+      const rows = Math.ceil(paths.length / columns);
+      const areaWidth = columns * 255;
+      addNode({
+        id: "lane:" + key, type: "label", title, subtitle: "",
+        x: -areaWidth / 2, y, w: areaWidth, h: 38
+      });
+      paths.forEach((item, index) => {
+        const path = typeof item === "string" ? item : item.path;
+        const doc = byPath.get(path), id = docId(path), column = index % columns;
+        const row = Math.floor(index / columns);
+        addNode({
+          id, type: "doc", path, groupKey: groupKey(doc),
+          title: doc.title,
+          subtitle: edgeType === "suggested" ? "Похоже по названию, не ссылка" : "Двусторонняя ссылка",
+          x: -areaWidth / 2 + column * 255, y: y + 45 + row * 51,
+          w: 242, h: 45, color
+        });
+        link(docId(focus.path), id, edgeType);
+      });
+      return 45 + rows * 51;
+    };
+    const mutualHeight = bottomLane(mutual, "mutual", "Взаимные ссылки", lowerStart, "mutual", COLORS[1]);
+    bottomLane(relatedTopics, "suggested", "Похожие темы · предположение", lowerStart + mutualHeight + (mutualHeight ? 45 : 0),
+      "suggested", COLORS[2]);
   }
 
   function refresh() {
@@ -296,20 +302,28 @@
     if (mode === "subject") layoutSubject();
     else if (mode === "near") layoutNear();
     else layoutMap(mode === "cohort");
+
     const paths = new Set(nodes.filter(node => node.type === "doc").map(node => node.path));
     shownReferences = references.filter(([a, b]) => paths.has(a) && paths.has(b));
-    back.hidden = mode !== "subject";
-    linksControl.closest("label").hidden = mode !== "subject";
-    stats.textContent = nodes.filter(n => n.type === "doc").length
-      ? nodes.filter(n => n.type === "doc").length + " статей · " + shownReferences.length + " ссылок"
-      : groups.length + " предметов · выберите предмет для просмотра статей";
+
+    back.hidden = mode !== "subject" && mode !== "near";
+    linksLabel.hidden = mode === "near" ||
+      ((mode === "map" || mode === "cohort") && !crossGroups.length);
+    $(".graph-link-label").textContent = mode === "subject" ? "Все ссылки" : "Связи предметов";
+    suggestionsLabel.hidden = mode !== "subject";
+    const nDocs = paths.size;
+    const nSubjects = nodes.filter(node => node.type === "subject").length;
+    stats.textContent = mode === "near"
+      ? nDocs + " статей · направление ссылок и похожие темы"
+      : mode === "subject"
+        ? nDocs + " статей · " + shownReferences.length + " прямых ссылок"
+        : nSubjects + " предметов · " + crossGroups.length + " межпредметных связей";
     if (!nodeById.has(chosen)) chosen = "";
     resize();
     fit();
     updateDetails();
   }
-
-  function colors() {
+    function colors() {
     const style = getComputedStyle(document.documentElement);
     return {
       bg: style.getPropertyValue("--bg").trim() || "#ffffff",
@@ -346,20 +360,50 @@
     return str.slice(0, low) + "…";
   }
   const center = node => ({ x: node.x + node.w / 2, y: node.y + node.h / 2 });
-  function edgeLine(a, b, color, width, curved) {
+function edgeLine(a, b, color, width, curved, arrows = "none") {
     if (!a || !b) return;
     const p = center(a), q = center(b);
+    let start = p, end = q, control1 = p, control2 = q;
     ctx.beginPath();
     if (curved && (mode === "subject" || mode === "near")) {
-      const startX = p.x < q.x ? p.x + a.w / 2 : p.x - a.w / 2;
-      const endX = p.x < q.x ? q.x - b.w / 2 : q.x + b.w / 2;
-      const middle = (startX + endX) / 2;
-      ctx.moveTo(startX, p.y);
-      ctx.bezierCurveTo(middle, p.y, middle, q.y, endX, q.y);
+      const dx = q.x - p.x, dy = q.y - p.y;
+      if (Math.abs(dx) >= Math.abs(dy) * .75) {
+        const sign = dx >= 0 ? 1 : -1;
+        start = { x: p.x + sign * a.w / 2, y: p.y };
+        end = { x: q.x - sign * b.w / 2, y: q.y };
+        const middle = (start.x + end.x) / 2;
+        control1 = { x: middle, y: start.y };
+        control2 = { x: middle, y: end.y };
+      } else {
+        const sign = dy >= 0 ? 1 : -1;
+        start = { x: p.x, y: p.y + sign * a.h / 2 };
+        end = { x: q.x, y: q.y - sign * b.h / 2 };
+        const middle = (start.y + end.y) / 2;
+        control1 = { x: start.x, y: middle };
+        control2 = { x: end.x, y: middle };
+      }
+      ctx.moveTo(start.x, start.y);
+      ctx.bezierCurveTo(control1.x, control1.y, control2.x, control2.y, end.x, end.y);
     } else {
-      ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(q.x, q.y);
     }
     ctx.lineWidth = width; ctx.strokeStyle = color; ctx.stroke();
+    if (arrows === "none") return;
+
+    const drawTip = (tip, before) => {
+      const angle = Math.atan2(tip.y - before.y, tip.x - before.x);
+      const length = 8;
+      ctx.beginPath();
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(tip.x - length * Math.cos(angle - .45), tip.y - length * Math.sin(angle - .45));
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(tip.x - length * Math.cos(angle + .45), tip.y - length * Math.sin(angle + .45));
+      ctx.lineWidth = Math.max(1.5, width);
+      ctx.strokeStyle = color; ctx.stroke();
+    };
+    drawTip(end, control2);
+    if (arrows === "both") drawTip(start, control1);
   }
   function render() {
     if (panel.hidden) return;
@@ -369,32 +413,69 @@
     ctx.translate(ox, oy);
     ctx.scale(scale, scale);
     const focus = chosen.startsWith("doc:") ? chosen.slice(4) : selectedPath;
+    const hoveredPath = hovered.startsWith("doc:") ? hovered.slice(4) : "";
     const related = adjacency.get(focus) || new Set();
+    const likely = new Set((suggestions.get(focus) || []).map(entry => entry.path));
 
+    // Structure and citations use different styles. Arrows are shown in local mode.
     for (const line of structure) {
       const a = nodeById.get(line.from), b = nodeById.get(line.to);
-      const color = line.type === "reference" ? "#50b8a4" : c.border;
-      edgeLine(a, b, color, line.type === "reference" ? 1.8 : 1.5, true);
+      if (line.type === "suggested") {
+        ctx.save();
+        ctx.setLineDash([6, 6]);
+        edgeLine(a, b, "#9a71cb", 1.5, true);
+        ctx.restore();
+      } else {
+        const isLink = line.type === "reference" || line.type === "mutual";
+        edgeLine(a, b, isLink ? "#25a895" : c.border, isLink ? 1.8 : 1.5, true,
+          line.type === "mutual" ? "both" : line.type === "reference" ? "end" : "none");
+      }
     }
+
     if (mode === "subject") {
       for (const [from, to] of shownReferences) {
-        const emphasized = from === focus || to === focus || from === hovered.slice(4) || to === hovered.slice(4);
+        const emphasized = from === focus || to === focus ||
+          from === hoveredPath || to === hoveredPath;
         if (showLinks || emphasized) {
           edgeLine(nodeById.get(docId(from)), nodeById.get(docId(to)),
-            emphasized ? "#25a895" : "rgba(96,139,184,.35)", emphasized ? 2.5 : 1, true);
+            emphasized ? "#25a895" : "rgba(96,139,184,.38)", emphasized ? 2.3 : 1, true);
         }
       }
+      if (showSuggestions && focus) {
+        ctx.save(); ctx.setLineDash([6, 7]);
+        for (const item of suggestions.get(focus) || []) {
+          if (nodeById.has(docId(item.path))) {
+            edgeLine(nodeById.get(docId(focus)), nodeById.get(docId(item.path)),
+              "#9a71cb", 1.6, true);
+          }
+        }
+        ctx.restore();
+      }
+    } else if (mode === "map" || mode === "cohort") {
+      ctx.save(); ctx.setLineDash([5, 8]);
+      for (const item of crossGroups) {
+        const a = groupId(item.a), b = groupId(item.b);
+        if (!nodeById.has(a) || !nodeById.has(b)) continue;
+        const highlighted = hovered === a || hovered === b || chosen === a || chosen === b;
+        if (showLinks || highlighted) {
+          edgeLine(nodeById.get(a), nodeById.get(b),
+            highlighted ? "#25a895" : "rgba(96,139,184,.34)", highlighted ? 2.3 : 1.2, false);
+        }
+      }
+      ctx.restore();
     }
 
     for (const node of nodes) {
       const active = chosen === node.id || hovered === node.id;
       const relatedDoc = node.path && related.has(node.path);
+      const similarDoc = showSuggestions && node.path && likely.has(node.path);
       const tint = node.color || c.accent;
       rounded(node.x, node.y, node.w, node.h, node.type === "hub" ? 19 : node.type === "subject" ? 12 : 8);
       ctx.fillStyle = active ? c.secondary : c.panel;
       ctx.fill();
       ctx.lineWidth = active ? 2.4 : node.type === "doc" ? 1.1 : 1.6;
-      ctx.strokeStyle = active ? c.accent : relatedDoc ? "#25a895" : node.type === "hub" ? c.accent : node.type === "subject" || node.type === "section" ? tint : c.border;
+      ctx.strokeStyle = active ? c.accent : relatedDoc ? "#25a895" : similarDoc ? "#9a71cb" :
+        node.type === "hub" ? c.accent : node.type === "subject" || node.type === "section" ? tint : c.border;
       ctx.stroke();
       if (node.type !== "hub" && node.type !== "label") {
         ctx.fillStyle = tint;
@@ -415,7 +496,7 @@
     }
     ctx.restore();
   }
-  function requestRender() {
+    function requestRender() {
     if (pendingFrame) return;
     pendingFrame = requestAnimationFrame(() => { pendingFrame = 0; render(); });
   }
@@ -449,6 +530,8 @@
     return null;
   }
   function showSubject(key) {
+    // Keep the default layout clear even after showing every inter-subject edge.
+    showLinks = false; linksControl.checked = false;
     activeGroup = key;
     mode = "subject"; scopeControl.value = mode;
     selectedPath = "";
@@ -471,32 +554,60 @@
     updateDetails();
     render();
   }
-  function updateDetails() {
+function updateDetails() {
     const selected = nodeById.get(chosen);
     if (!selected) {
-      details.innerHTML = '<strong>Карта материалов</strong><p>Предметы распределены по отдельным направлениям. Выберите предмет, затем статью, чтобы увидеть её ссылки.</p>' +
-        '<p class="graph-help">Карточки разделов показывают структуру, а цветные линии — реальные ссылки в конспектах.</p>';
+      details.innerHTML = '<strong>Карта материалов</strong>' +
+        '<p>Направления показывают предметы и разделы. Линии структуры не означают цитирования.</p>' +
+        '<p class="graph-help">Выберите предмет и статью. Для каждой статьи доступны исходящие, входящие и возможные тематические связи.</p>';
       return;
     }
     if (!selected.path) {
-      details.innerHTML = '<strong>' + esc(selected.title) + '</strong><p>Раздел: ' + esc(selected.subtitle) + '</p>' +
-        '<p class="graph-help">Выберите карточку статьи в правой части схемы.</p>';
+      details.innerHTML = '<strong>' + esc(selected.title) + '</strong>' +
+        '<p>' + esc(selected.subtitle || "Выберите карточку статьи для просмотра ссылок.") + '</p>';
       return;
     }
+
     const doc = byPath.get(selected.path);
-    const related = [...(adjacency.get(selected.path) || [])].map(path => byPath.get(path)).filter(Boolean)
+    if (!doc) return;
+    const received = incoming.get(doc.path) || new Set();
+    const sent = outgoing.get(doc.path) || new Set();
+    const possible = suggestions.get(doc.path) || [];
+    const errors = unresolved.get(doc.path) || [];
+    const toDocs = paths => [...paths].map(path => byPath.get(path)).filter(Boolean)
       .sort((a, b) => collator.compare(a.title, b.title));
+    const outbound = toDocs(sent), inbound = toDocs(received);
+    const relationButtons = items => '<div class="graph-related">' +
+      items.map(item => {
+        const candidate = typeof item.path === "string" && item.score != null;
+        const target = candidate ? byPath.get(item.path) : item;
+        if (!target) return "";
+        return '<button type="button" data-path="' + esc(target.path) + '">' +
+          '<span>' + esc(target.title) + '</span>' +
+          (candidate ? '<small>' + esc(item.reason) + '</small>' :
+            '<small>' + esc(subjectName(target.subject)) + '</small>') +
+          '</button>';
+      }).join("") + '</div>';
     details.innerHTML = '<strong>' + esc(doc.title) + '</strong>' +
       '<small>' + esc(subjectName(doc.subject)) + ' · ' + esc(sectionName(doc.section || "root")) + '</small>' +
       '<a class="graph-open" href="' + docHash(doc.path) + '">Открыть статью ↗</a>' +
-      '<h3>Связанные статьи (' + related.length + ')</h3>' +
-      (related.length
-        ? '<div class="graph-related">' + related.map(item =>
-            '<button type="button" data-path="' + esc(item.path) + '">' + esc(item.title) + '</button>').join("") + '</div>'
-        : '<p>Явных ссылок на другие статьи пока нет.</p>');
+      '<button type="button" class="graph-near-button" data-near-path="' + esc(doc.path) + '">' +
+        'Показать направления связей</button>' +
+      '<h3>Исходящие ссылки (' + outbound.length + ')</h3>' +
+      (outbound.length ? relationButtons(outbound) : '<p>В статье нет явных ссылок на другие заметки.</p>') +
+      '<h3>Обратные ссылки (' + inbound.length + ')</h3>' +
+      (inbound.length ? relationButtons(inbound) : '<p>Другие заметки пока не ссылаются на эту статью.</p>') +
+      '<h3>Похожие темы (' + possible.length + ')</h3>' +
+      '<p class="graph-help">Предположение по названиям статей, не настоящая ссылка.</p>' +
+      (possible.length ? relationButtons(possible) : '<p>Надёжных совпадений названий не найдено.</p>') +
+      (errors.length ? '<details class="graph-unresolved"><summary>Не найдены ссылки (' + errors.length + ')</summary>' +
+        '<ul>' + errors.slice(0, 20).map(item =>
+          '<li><code>' + esc(item.target) + '</code> · ' +
+          (item.reason === "ambiguous" ? "неоднозначная цель" : "файл не найден") + '</li>').join("") +
+        '</ul></details>' : "");
   }
 
-  function open(value) {
+    function open(value) {
     panel.hidden = !value;
     root.classList.toggle("is-open", value);
     button.setAttribute("aria-expanded", String(value));
@@ -524,15 +635,30 @@
       const doc = byPath.get(activePath());
       if (doc && !activeGroup) activeGroup = groupKey(doc);
     }
-    if (mode === "near") selectedPath = activePath() || selectedPath;
+    if (mode === "near") selectedPath = chosen.startsWith("doc:") ? chosen.slice(4) : activePath() || selectedPath;
     chosen = ""; refresh();
   });
   linksControl.addEventListener("change", () => { showLinks = linksControl.checked; render(); });
-  details.addEventListener("click", event => {
+  suggestionsControl.addEventListener("change", () => { showSuggestions = suggestionsControl.checked; render(); });
+details.addEventListener("click", event => {
+    const local = event.target.closest("[data-near-path]");
+    if (local) {
+      selectedPath = local.dataset.nearPath;
+      mode = "near"; scopeControl.value = mode;
+      chosen = docId(selectedPath);
+      refresh();
+      return;
+    }
     const control = event.target.closest("[data-path]");
     if (!control) return;
     const path = control.dataset.path, doc = byPath.get(path);
     if (!doc) return;
+    if (mode === "near") {
+      selectedPath = path;
+      chosen = docId(path);
+      refresh();
+      return;
+    }
     if (!nodeById.has(docId(path))) {
       activeGroup = groupKey(doc);
       mode = "subject"; scopeControl.value = mode;
@@ -542,7 +668,8 @@
     chosen = docId(path);
     updateDetails(); render();
   });
-  window.addEventListener("keydown", event => {
+
+    window.addEventListener("keydown", event => {
     if (event.key === "Escape" && !panel.hidden) { event.preventDefault(); open(false); }
     if (event.key === "Tab" && !panel.hidden) {
       const focusable = [...panel.querySelectorAll('button:not([disabled]):not([hidden]),input:not([disabled]),select:not([disabled]),a[href]')]

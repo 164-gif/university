@@ -192,3 +192,79 @@
 @media (max-height: 650px) {
   #article-graph .graph-panel { inset: 10px 2vw; }
 }
+
+
+/* Relationship controls and diagnostics. */
+#article-graph .graph-suggestions[hidden] { display: none !important; }
+#article-graph .graph-links[hidden] { display: none !important; }
+#article-graph .graph-suggestions {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+#article-graph .graph-show-suggestions {
+  accent-color: #9a71cb;
+}
+#article-graph .graph-near-button {
+  width: 100%;
+  min-height: 36px;
+  padding: 9px 11px;
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font: 600 12px/1.35 system-ui;
+  cursor: pointer;
+  text-align: left;
+}
+#article-graph .graph-near-button:hover {
+  background: var(--panel-2);
+}
+#article-graph .graph-details .graph-help {
+  font-size: 12px;
+  line-height: 1.45;
+}
+#article-graph .graph-related button {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+#article-graph .graph-related button small {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+#article-graph .graph-unresolved {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+#article-graph .graph-unresolved summary {
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+#article-graph .graph-unresolved ul {
+  padding-left: 16px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 11px;
+}
+#article-graph .graph-unresolved li + li {
+  margin-top: 7px;
+}
+#article-graph .graph-unresolved code {
+  font: 11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;
+  color: var(--text);
+}
+@media (min-width:1024px) and (max-width:1120px) {
+  #article-graph .graph-panel {
+    grid-template-columns:minmax(0,1fr) 228px;
+  }
+  #article-graph .graph-controls {
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+}
