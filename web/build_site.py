@@ -179,6 +179,7 @@ def main() -> None:
         + (WEB / "styles.css").read_bytes()
         + (WEB / "enhancements.css").read_bytes()
         + (WEB / "article-graph.js").read_bytes()
+        + (WEB / "article-relations.js").read_bytes()
         + (WEB / "article-graph.css").read_bytes()
     ).hexdigest()[:12]
 
@@ -188,6 +189,7 @@ def main() -> None:
         "enhancements.css",
         "article-graph.css",
         "article-graph.js",
+        "article-relations.js",
         "app.js",
         "geometry-quiz.js",
         "geometry-quiz-bootstrap.js",
@@ -203,6 +205,7 @@ def main() -> None:
     html = html.replace('href="enhancements.css"', f'href="enhancements.css?v={build_id}"')
     html = html.replace('src="app.js"', f'src="app.js?v={build_id}"')
     html = html.replace('src="article-graph.js"', f'src="article-graph.js?v={build_id}"')
+    html = html.replace('src="article-relations.js"', f'src="article-relations.js?v={build_id}"')
     html = html.replace('href="article-graph.css"', f'href="article-graph.css?v={build_id}"')
     index_path.write_text(html, encoding="utf-8")
 
