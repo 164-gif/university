@@ -552,32 +552,60 @@ function edgeLine(a, b, color, width, curved, arrows = "none") {
     updateDetails();
     render();
   }
-  function updateDetails() {
+function updateDetails() {
     const selected = nodeById.get(chosen);
     if (!selected) {
-      details.innerHTML = '<strong>Карта материалов</strong><p>Предметы распределены по отдельным направлениям. Выберите предмет, затем статью, чтобы увидеть её ссылки.</p>' +
-        '<p class="graph-help">Карточки разделов показывают структуру, а цветные линии — реальные ссылки в конспектах.</p>';
+      details.innerHTML = '<strong>Карта материалов</strong>' +
+        '<p>Направления показывают предметы и разделы. Линии структуры не означают цитирования.</p>' +
+        '<p class="graph-help">Выберите предмет и статью. Для каждой статьи доступны исходящие, входящие и возможные тематические связи.</p>';
       return;
     }
     if (!selected.path) {
-      details.innerHTML = '<strong>' + esc(selected.title) + '</strong><p>Раздел: ' + esc(selected.subtitle) + '</p>' +
-        '<p class="graph-help">Выберите карточку статьи в правой части схемы.</p>';
+      details.innerHTML = '<strong>' + esc(selected.title) + '</strong>' +
+        '<p>' + esc(selected.subtitle || "Выберите карточку статьи для просмотра ссылок.") + '</p>';
       return;
     }
+
     const doc = byPath.get(selected.path);
-    const related = [...(adjacency.get(selected.path) || [])].map(path => byPath.get(path)).filter(Boolean)
+    if (!doc) return;
+    const received = incoming.get(doc.path) || new Set();
+    const sent = outgoing.get(doc.path) || new Set();
+    const possible = suggestions.get(doc.path) || [];
+    const errors = unresolved.get(doc.path) || [];
+    const toDocs = paths => [...paths].map(path => byPath.get(path)).filter(Boolean)
       .sort((a, b) => collator.compare(a.title, b.title));
+    const outbound = toDocs(sent), inbound = toDocs(received);
+    const relationButtons = items => '<div class="graph-related">' +
+      items.map(item => {
+        const candidate = typeof item.path === "string" && item.score != null;
+        const target = candidate ? byPath.get(item.path) : item;
+        if (!target) return "";
+        return '<button type="button" data-path="' + esc(target.path) + '">' +
+          '<span>' + esc(target.title) + '</span>' +
+          (candidate ? '<small>' + esc(item.reason) + '</small>' :
+            '<small>' + esc(subjectName(target.subject)) + '</small>') +
+          '</button>';
+      }).join("") + '</div>';
     details.innerHTML = '<strong>' + esc(doc.title) + '</strong>' +
       '<small>' + esc(subjectName(doc.subject)) + ' · ' + esc(sectionName(doc.section || "root")) + '</small>' +
       '<a class="graph-open" href="' + docHash(doc.path) + '">Открыть статью ↗</a>' +
-      '<h3>Связанные статьи (' + related.length + ')</h3>' +
-      (related.length
-        ? '<div class="graph-related">' + related.map(item =>
-            '<button type="button" data-path="' + esc(item.path) + '">' + esc(item.title) + '</button>').join("") + '</div>'
-        : '<p>Явных ссылок на другие статьи пока нет.</p>');
+      '<button type="button" class="graph-near-button" data-near-path="' + esc(doc.path) + '">' +
+        'Показать направления связей</button>' +
+      '<h3>Исходящие ссылки (' + outbound.length + ')</h3>' +
+      (outbound.length ? relationButtons(outbound) : '<p>В статье нет явных ссылок на другие заметки.</p>') +
+      '<h3>Обратные ссылки (' + inbound.length + ')</h3>' +
+      (inbound.length ? relationButtons(inbound) : '<p>Другие заметки пока не ссылаются на эту статью.</p>') +
+      '<h3>Похожие темы (' + possible.length + ')</h3>' +
+      '<p class="graph-help">Предположение по названиям статей, не настоящая ссылка.</p>' +
+      (possible.length ? relationButtons(possible) : '<p>Надёжных совпадений названий не найдено.</p>') +
+      (errors.length ? '<details class="graph-unresolved"><summary>Не найдены ссылки (' + errors.length + ')</summary>' +
+        '<ul>' + errors.slice(0, 20).map(item =>
+          '<li><code>' + esc(item.target) + '</code> · ' +
+          (item.reason === "ambiguous" ? "неоднозначная цель" : "файл не найден") + '</li>').join("") +
+        '</ul></details>' : "");
   }
 
-  function open(value) {
+    function open(value) {
     panel.hidden = !value;
     root.classList.toggle("is-open", value);
     button.setAttribute("aria-expanded", String(value));
@@ -605,15 +633,30 @@ function edgeLine(a, b, color, width, curved, arrows = "none") {
       const doc = byPath.get(activePath());
       if (doc && !activeGroup) activeGroup = groupKey(doc);
     }
-    if (mode === "near") selectedPath = activePath() || selectedPath;
+    if (mode === "near") selectedPath = chosen.startsWith("doc:") ? chosen.slice(4) : activePath() || selectedPath;
     chosen = ""; refresh();
   });
   linksControl.addEventListener("change", () => { showLinks = linksControl.checked; render(); });
-  details.addEventListener("click", event => {
+  suggestionsControl.addEventListener("change", () => { showSuggestions = suggestionsControl.checked; render(); });
+details.addEventListener("click", event => {
+    const local = event.target.closest("[data-near-path]");
+    if (local) {
+      selectedPath = local.dataset.nearPath;
+      mode = "near"; scopeControl.value = mode;
+      chosen = docId(selectedPath);
+      refresh();
+      return;
+    }
     const control = event.target.closest("[data-path]");
     if (!control) return;
     const path = control.dataset.path, doc = byPath.get(path);
     if (!doc) return;
+    if (mode === "near") {
+      selectedPath = path;
+      chosen = docId(path);
+      refresh();
+      return;
+    }
     if (!nodeById.has(docId(path))) {
       activeGroup = groupKey(doc);
       mode = "subject"; scopeControl.value = mode;
@@ -623,7 +666,8 @@ function edgeLine(a, b, color, width, curved, arrows = "none") {
     chosen = docId(path);
     updateDetails(); render();
   });
-  window.addEventListener("keydown", event => {
+
+    window.addEventListener("keydown", event => {
     if (event.key === "Escape" && !panel.hidden) { event.preventDefault(); open(false); }
     if (event.key === "Tab" && !panel.hidden) {
       const focusable = [...panel.querySelectorAll('button:not([disabled]):not([hidden]),input:not([disabled]),select:not([disabled]),a[href]')]
