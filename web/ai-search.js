@@ -1,4 +1,4 @@
-import * as ort from "onnxruntime-web";
+import * as ort from "./node_modules/onnxruntime-web/dist/ort.wasm.min.mjs";
 import { UniversityBPETokenizer } from "./ai-search-tokenizer.js";
 
 ort.env.wasm.wasmPaths = new URL("./node_modules/onnxruntime-web/dist/", import.meta.url).href;

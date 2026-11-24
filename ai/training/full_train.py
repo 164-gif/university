@@ -55,6 +55,10 @@ def gpu_temperature(device):
 def run(args):
     if args.epochs<1 or args.mlm_epochs<0 or args.batch_size<2 or args.threads<1 or args.lr<=0 or args.grad_accum<1:
         raise ValueError("invalid training config")
+    if args.initial_checkpoint and args.mlm_epochs:
+        raise ValueError("--initial-checkpoint requires --mlm-epochs 0")
+    if args.vector_weight<0 or (args.vector_weight and args.no_teacher):
+        raise ValueError("--vector-weight requires a nonnegative weight and a semantic teacher")
     torch.manual_seed(args.seed)
     torch.set_num_threads(args.threads)
     rng=random.Random(args.seed)
@@ -83,7 +87,7 @@ def run(args):
     if set(r["subject"] for r in train_rows)&set(r["subject"] for s in ("validation","test") for r in data[s][0]):
         raise ValueError("subject leakage")
     model=UniversityEncoder(cfg).to(device)
-    out=root/"trained"
+    out=Path(args.output) if args.output else root/"trained"
     out.mkdir(parents=True,exist_ok=True)
     try:
         from torch.utils.tensorboard import SummaryWriter
@@ -98,24 +102,31 @@ def run(args):
             "training_parameters":{"device":str(device),"precision":args.precision,
                 "batch_size":args.batch_size,"gradient_accumulation":args.grad_accum,
                 "learning_rate":args.lr,"semantic_weight":args.semantic_weight,
+                "scope_negatives":args.scope_negatives,"initial_checkpoint":args.initial_checkpoint,
+                "vector_weight":args.vector_weight,
                 "optimizer":"AdamW fused when supported","gradient_clip_norm":1.0,
                 "mlm_mask_probability":0.15,"torch_compile_requested":args.compile},
             "config":cfg.to_dict(),"parameters":model.parameter_count(),
             "tokenizer_sha256":tokenizer_sha256(tok_path),"dataset_sha256":aug["dataset_manifest_sha256"],
             "variant_count":aug["variant_count"],"base_queries":len(train_examples),
             "augmentation":aug["augmentation"],"tokenization_cache_capacity":120000,"history":[]}
-    write_report(out,report)
-    report["initial_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
-    report["mlm"]=pretrain(model,tokenizer,train_rows,epochs=args.mlm_epochs,batch_size=args.batch_size,
-                           device=device,seed=args.seed,lr=args.lr)
-    if report["mlm"]:
-        mlm_steps=sum(row["steps"] for row in report["mlm"])
-        save_checkpoint(out/"encoder-mlm.pt",model,tok_path,trained_steps=mlm_steps,
-                        epoch=args.mlm_epochs,dataset_sha256=aug["dataset_manifest_sha256"],
-                        config={"phase":"mlm","epochs":args.mlm_epochs,"masking_probability":.15})
-    report["post_mlm_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
-    write_report(out,report)
+    if not args.resume:
+        report["initial_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
+        if args.initial_checkpoint:
+            model,_=load_checkpoint(args.initial_checkpoint,tok_path,map_location=device)
+            if model.config!=cfg:
+                raise ValueError("initial checkpoint architecture differs from dataset configuration")
+        report["mlm"]=pretrain(model,tokenizer,train_rows,epochs=args.mlm_epochs,batch_size=args.batch_size,
+                               device=device,seed=args.seed,lr=args.lr)
+        if report["mlm"]:
+            mlm_steps=sum(row["steps"] for row in report["mlm"])
+            save_checkpoint(out/"encoder-mlm.pt",model,tok_path,trained_steps=mlm_steps,
+                            epoch=args.mlm_epochs,dataset_sha256=aug["dataset_manifest_sha256"],
+                            config={"phase":"mlm","epochs":args.mlm_epochs,"masking_probability":.15})
+        report["post_mlm_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
+        write_report(out,report)
     teacher=None if args.no_teacher else SemanticTeacher(train_rows,train_examples,device,cache_dir=root/"teacher-cache")
+    projected=teacher.projected_vectors(cfg.embedding_size,device) if args.vector_weight else None
     corpus=TrainingCorpus(train_rows,train_examples,tokenizer)
     try:
         optimizer=torch.optim.AdamW(model.parameters(),lr=args.lr,weight_decay=.01,
@@ -138,9 +149,13 @@ def run(args):
     last_checkpoint=out/"encoder-last.pt"
     first_epoch=1
     if args.resume:
-        state=torch.load(last_checkpoint,map_location="cpu",weights_only=False)
+        state=torch.load(last_checkpoint,map_location="cpu",weights_only=True)
         if state.get("tokenizer_sha256")!=tokenizer_sha256(tok_path) or state.get("dataset_sha256")!=aug["dataset_manifest_sha256"]:
             raise ValueError("resume checkpoint tokenizer/dataset hash mismatch")
+        saved_config=state.get("training_config",{})
+        for key in ("epochs","batch_size","grad_accum","lr","precision","seed","semantic_weight","no_teacher","scope_negatives","vector_weight"):
+            if key in saved_config and saved_config[key]!=getattr(args,key):
+                raise ValueError(f"resume checkpoint configuration mismatch: {key}")
         model.load_state_dict(state["state_dict"])
         optimizer.load_state_dict(state["optimizer"]); scheduler.load_state_dict(state["scheduler"])
         if state.get("scaler"): scaler.load_state_dict(state["scaler"])
@@ -150,6 +165,8 @@ def run(args):
         if device.type=="cuda" and state["rng"].get("cuda"): torch.cuda.set_rng_state_all(state["rng"]["cuda"])
         if state["rng"].get("python"): rng.setstate(state["rng"]["python"])
         report.update(state.get("report",{}))
+        seen={(key,query) for key,queries in variants.items() for query in queries[:first_epoch-1]}
+        start-=report.get("elapsed_seconds",0)
     if args.compile:
         try:
             candidate=torch.compile(model)
@@ -165,15 +182,19 @@ def run(args):
         contrasts=[]
         lexical=[]
         semantic=[]
-        for examples in corpus.batches(rng,args.batch_size,0):
-            ids,pos,w,ts,pairs=corpus.prepare(examples,rng,device)
+        vector_losses=[]
+        for examples in corpus.batches(rng,args.batch_size,0,group_by_scope=args.scope_negatives):
+            ids,pos,w,ts,pairs=corpus.prepare(examples,rng,device,scope_negatives=args.scope_negatives)
             query_texts=[variants[e["id"]][(epoch-1)%len(variants[e["id"]])] for e in examples]
             q=collate_texts(tokenizer,query_texts,cfg,device=device)
             d=collate_texts(tokenizer,[corpus.rows[k]["encoder_text"] for k in ids],cfg,device=device)
             if (len(losses) % args.grad_accum)==0: optimizer.zero_grad(set_to_none=True)
             autocast=(torch.autocast(device_type="cuda",dtype=amp_dtype) if amp_dtype and device.type=="cuda" else contextlib.nullcontext())
             with autocast:
-                logits=(model(**q)@model(**d).T)/.07
+                query_vectors=model(**q)
+                document_vectors=model(**d)
+                similarities=query_vectors@document_vectors.T
+            logits=similarities.float()/.07
             if teacher:
                 scores=teacher.scores(examples,ids,device)
                 best_positive=scores.masked_fill(~pos,-torch.inf).max(1,keepdim=True).values
@@ -186,6 +207,13 @@ def run(args):
             c_loss=contrastive_loss(logits,pos,w)
             l_loss=.1*teacher_loss(logits,ts,pairs)
             loss=c_loss+l_loss+args.semantic_weight*sem
+            if projected is not None:
+                teacher_queries=projected[0][[teacher.query_ids[e["id"]] for e in examples]]
+                teacher_docs=projected[1][[teacher.doc_ids[key] for key in ids]]
+                vector_loss=1-.5*((query_vectors*teacher_queries).sum(-1).mean()+
+                                   (document_vectors*teacher_docs).sum(-1).mean())
+                loss=loss+args.vector_weight*vector_loss
+                vector_losses.append(vector_loss.item())
             loss=loss/args.grad_accum
             if not torch.isfinite(loss):
                 raise RuntimeError("nonfinite loss")
@@ -214,6 +242,8 @@ def run(args):
                 "queries_per_second":len(train_examples)/max(epoch_seconds,1e-9),
                 "epoch_seconds":epoch_seconds,"vram_peak_mib":vram,"gpu_temperature_c":temperature,
                 "validation":val}
+        if vector_losses:
+            record["vector_distillation_loss"]=sum(vector_losses)/len(vector_losses)
         report["history"].append(record)
         score=val["0.0"]["mrr_at5"]
         if score>best:
@@ -237,7 +267,7 @@ def run(args):
         with epoch_log.open("a",encoding="utf-8") as stream:
             stream.write(json.dumps(record,ensure_ascii=False)+"\n")
         if tensorboard:
-            for key in ("loss","contrastive_loss","lexical_distillation_loss","semantic_loss","learning_rate",
+            for key in ("loss","contrastive_loss","lexical_distillation_loss","semantic_loss","vector_distillation_loss","learning_rate",
                         "queries_per_second","epoch_seconds","vram_peak_mib","gpu_temperature_c"):
                 if record.get(key) is not None: tensorboard.add_scalar("train/"+key,record[key],epoch)
             for key in ("top1","top5","mrr_at5"):
@@ -249,9 +279,10 @@ def run(args):
     alpha=choose_alpha(val)
     report["validation"]=val
     report["selected_lexical_weight"]=alpha
-    report["test"]=evaluate(model,tokenizer,*data["test"],device=device,alphas=tuple(sorted({0.,1.,alpha})))
-    cases=json.loads((Path(__file__).parents[1]/"evaluation"/"paraphrases_test.json").read_text(encoding="utf-8"))
-    report["manual_test"]=evaluate_manual(model,tokenizer,data["test"][0],cases,device=device,alpha=alpha)
+    if not args.validation_only:
+        report["test"]=evaluate(model,tokenizer,*data["test"],device=device,alphas=tuple(sorted({0.,1.,alpha})))
+        cases=json.loads((Path(__file__).parents[1]/"evaluation"/"paraphrases_test.json").read_text(encoding="utf-8"))
+        report["manual_test"]=evaluate_manual(model,tokenizer,data["test"][0],cases,device=device,alpha=alpha)
     report.update({"status":"completed","best_steps":best_steps,"checkpoint_bytes":checkpoint.stat().st_size,
                    "checkpoint_sha256":hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
                    "seconds":round(perf_counter()-start,2)})
@@ -263,6 +294,10 @@ def run(args):
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--directory",default="ai/generated/full")
+    p.add_argument("--output",help="checkpoint/report directory (default: DIRECTORY/trained)")
+    p.add_argument("--initial-checkpoint",help="initialize weights from a compatible checkpoint")
+    p.add_argument("--validation-only",action="store_true",help="skip final scoring on Test")
+    p.add_argument("--scope-negatives",action="store_true",help="group batches by cohort/subject and sample a hard candidate per query")
     p.add_argument("--epochs",type=int,default=50)
     p.add_argument("--mlm-epochs",type=int,default=5)
     p.add_argument("--batch-size",type=int,default=16)
@@ -270,6 +305,7 @@ if __name__=="__main__":
     p.add_argument("--seed",type=int,default=42)
     p.add_argument("--lr",type=float,default=3e-4)
     p.add_argument("--semantic-weight",type=float,default=.5)
+    p.add_argument("--vector-weight",type=float,default=0.,help="weight of direct E5 vector distillation")
     p.add_argument("--device",default="cuda")
     p.add_argument("--precision",choices=("bf16","fp16","fp32"),default="bf16")
     p.add_argument("--grad-accum",type=int,default=1)

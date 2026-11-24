@@ -66,24 +66,28 @@ class TrainingCorpus:
                 e["query"],cohort=e["cohort"],subject=e["subject"],limit=60,fuzzy=False)}
         return self.teacher_cache[key]
 
-    def batches(self,rng,batch_size,max_steps):
+    def batches(self,rng,batch_size,max_steps,*,group_by_scope=False):
         order=list(self.examples)
         rng.shuffle(order)
+        if group_by_scope:
+            order.sort(key=lambda e:(e["cohort"],e["subject"]))
         # Sort only small shuffled pools by approximate length: reduce pad
         # cost without systematically training on short passages first.
         batches=[]
         width=batch_size*12
         for start in range(0,len(order),width):
-            block=sorted(order[start:start+width],key=lambda e:max(self.lengths[k] for k in e["positive_ids"]))
+            block=sorted(order[start:start+width],key=lambda e:(
+                (e["cohort"],e["subject"]) if group_by_scope else (),
+                max(self.lengths[k] for k in e["positive_ids"])))
             batches.extend(block[i:i+batch_size] for i in range(0,len(block),batch_size))
         rng.shuffle(batches)
         return batches[:max_steps] if max_steps else batches
 
-    def prepare(self,examples,rng,device):
+    def prepare(self,examples,rng,device,*,scope_negatives=False):
         chosen=[rng.choice(e["positive_ids"]) for e in examples]
         hard={}
         for i,e in enumerate(examples):
-            if i%3==0 and e["negative_candidates"]:
+            if (scope_negatives or i%3==0) and e["negative_candidates"]:
                 candidate=rng.choice(e["negative_candidates"])["id"]
                 # The lexical teacher can identify uncertain hard labels.
                 hard[i]=candidate

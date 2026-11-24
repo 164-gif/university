@@ -7,6 +7,8 @@ from ai.training.train import TrainingCorpus
 from ai.tokenizer.bpe import train
 from ai.indexing.chunker import chunk_document
 from ai.training.dataset import encoder_text
+from ai.search.bm25 import Hit
+from ai.search.rerank import rerank
 import random
 
 class TrainingTests(unittest.TestCase):
@@ -50,3 +52,18 @@ class TrainingTests(unittest.TestCase):
         self.assertTrue(pos[0,ids.index(rows[0]["id"])])
         self.assertEqual(w[0,ids.index(rows[1]["id"])].item(),0)
         self.assertEqual(w[0,ids.index(rows[2]["id"])].item(),1)
+
+    def test_scope_batches_visit_every_query_once(self):
+        corpus=TrainingCorpus.__new__(TrainingCorpus)
+        corpus.examples=[{"id":i,"cohort":"c","subject":str(i//8),"positive_ids":[i]}
+                         for i in range(19)]
+        corpus.lengths={i:19-i for i in range(19)}
+        batches=corpus.batches(random.Random(7),4,0,group_by_scope=True)
+        self.assertEqual(sorted(e["id"] for batch in batches for e in batch),list(range(19)))
+        self.assertTrue(all(len({e["subject"] for e in batch})==1 for batch in batches))
+
+    def test_rerank_uses_normalized_bm25_and_preserves_candidates(self):
+        hits=[Hit({"id":"a"},10.,1.,(),()),Hit({"id":"b"},9.,1.,(),())]
+        similarities={"a":.3,"b":.6,"outside":1.}
+        self.assertEqual([hit for hit,_ in rerank(hits,similarities,0)],hits)
+        self.assertEqual([hit for hit,_ in rerank(hits,similarities,1)],hits[::-1])

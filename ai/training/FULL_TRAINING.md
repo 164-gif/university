@@ -57,3 +57,38 @@ npm --prefix web run serve:ai
 ```
 
 Откройте `http://localhost:8000/web/ai-search.html`. Страница выполняет запросы через ONNX Runtime Web/WASM; модель, tokenizer, индекс и runtime загружаются локально, без внешнего сервера или учителя. Для чистого checkout сначала надо получить локальные артефакты обучения; крупные веса намеренно не включены в Git.
+
+## Эксперименты с ранжированием
+
+Оба прогона начинают с сохранённого Train-only MLM checkpoint и выполняют по 50 контрастивных эпох. `--scope-negatives` группирует запросы по учебному набору и предмету и выбирает сложный кандидат для каждого запроса, где он есть. `--vector-weight 4` добавляет косинусную потерю между выходом студента и векторами E5, спроецированными в 128 измерений по кешу Train. Оба режима сохраняют исходную архитектуру.
+
+```bash
+BASE=ai/generated/full
+for RUN in scope-negatives vector-distillation; do
+  mkdir -p "$BASE/experiments/$RUN"
+  if [ "$RUN" = scope-negatives ]; then
+    ARGS=(--scope-negatives)
+  else
+    ARGS=(--vector-weight 4)
+  fi
+  .venv/bin/python -m ai.training.full_train --epochs 50 --mlm-epochs 0 \
+    --initial-checkpoint "$BASE/trained/encoder-mlm.pt" --validation-only \
+    --output "$BASE/experiments/$RUN" "${ARGS[@]}"
+done
+.venv/bin/python -m ai.training.compare_reranking \
+  --checkpoint "$BASE/trained/encoder-best.pt" \
+  --checkpoint "$BASE/experiments/scope-negatives/encoder-best.pt" \
+  --checkpoint "$BASE/experiments/vector-distillation/encoder-best.pt" \
+  --output "$BASE/experiments/reranking-report.json"
+```
+
+Сравнение пробует переставлять первые 10 результатов BM25F по сумме нормированного лексического балла и взвешенного косинуса. Скрипт выбирает checkpoint и вес по MRR@5 на Validation. После выбора он измеряет BM25F, выбранный энкодер и гибрид на Test. Гибрид ограничен десятью кандидатами BM25F и не восстанавливает пропущенные им фрагменты.
+
+В локальном эксперименте на RTX 4060 каждый прогон завершил 9 100 шагов. На Validation MRR@5 отдельного энкодера составил 33,64% у исходной v0.2, 37,97% у прямой дистилляции и 8,72% у варианта со сложными примерами. Validation выбрала последний вариант для переранжирования с весом 2,0: MRR@5 поднялся с 86,38% до 91,22%. На 295 запросах Test улучшение не подтвердилось.
+
+| Test | Top-1 | Top-3 | Top-5 | MRR@5 |
+| --- | ---: | ---: | ---: | ---: |
+| BM25F | 76,95% | 94,92% | 98,64% | 86,12% |
+| Выбранный гибрид | 75,25% | 96,27% | 97,97% | 85,31% |
+
+На 14 отдельных перефразировках MRR@5 у обоих методов составил 39,29%. BM25F остался поиском по умолчанию. Результаты прямой дистилляции приведены для Validation, поскольку финальная проверка гибрида использовала другой checkpoint. Артефакты обоих прогонов и итоговый отчёт расположены в `ai/generated/full/experiments/`.

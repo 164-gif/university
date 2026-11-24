@@ -71,6 +71,13 @@ class SemanticTeacher:
         d=self.docs[[self.doc_ids[k] for k in ids]]
         return (q@d.T).to(device)
 
+    def projected_vectors(self, dimensions, device):
+        """Use the same train-only orthogonal projection for query and passage vectors."""
+        vectors=torch.cat((self.queries,self.docs)).to(device)
+        _,eigenvectors=torch.linalg.eigh(vectors.T @ vectors)
+        projected=F.normalize(vectors @ eigenvectors[:, -dimensions:],dim=-1)
+        return projected.split((len(self.queries),len(self.docs)))
+
 def semantic_loss(student_logits,teacher_cosine,positive,weights,teacher_temperature=.025):
     # Distil the relative ranking only among selected candidates. Ignore
     # possible equivalents in the same way as the contrastive objective.

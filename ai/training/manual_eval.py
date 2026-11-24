@@ -1,9 +1,7 @@
 """Assistant-authored source-anchored paraphrases, never used for tuning."""
-import json
-from pathlib import Path
 from ai.training.retrieval_eval import evaluate
 
-def evaluate_manual(model,tokenizer,rows,cases,*,device,alpha):
+def manual_examples(rows,cases):
     examples=[]
     missing=[]
     for case in cases:
@@ -14,6 +12,10 @@ def evaluate_manual(model,tokenizer,rows,cases,*,device,alpha):
             continue
         examples.append({"query":case["q"],"cohort":"ib-2026-1kurs",
                          "subject":"russian_statehood_fundamentals","positive_ids":gold})
+    return examples,missing
+
+def evaluate_manual(model,tokenizer,rows,cases,*,device,alpha):
+    examples,missing=manual_examples(rows,cases)
     if not examples:
         raise ValueError("no valid manual evaluation anchors")
     return {"authorship":"assistant_authored_not_human_validated","missing":missing,
