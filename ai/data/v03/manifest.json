@@ -2,30 +2,40 @@
   "format": "university-question-bank-v1",
   "source_commit": "feaa746d2e9a0662ad2fc0748da621f890a50332",
   "seed": 42,
-  "requested_generated": 1000,
+  "requested_generated": 3000,
   "existing_occurrences": 1508,
   "existing_unique": 1330,
   "existing_labeled": 297,
   "existing_review": 1033,
-  "generated": 1000,
+  "generated": 3000,
   "generated_by_origin": {
     "assistant_authored": 119,
-    "reverse_definition": 382,
-    "definition_question": 316,
-    "formula_question": 76,
-    "qa_rewrite": 9,
-    "topic_question": 98
+    "reverse_definition": 405,
+    "definition_question": 409,
+    "formula_question": 211,
+    "qa_rewrite": 21,
+    "topic_question": 670,
+    "reverse_definition_extra": 100,
+    "list_retrieval": 126,
+    "qa_rephrase_extra": 112,
+    "definition_lookup": 22,
+    "formula_lookup": 197,
+    "short_definition": 11,
+    "conversational_definition": 11,
+    "short_topic": 311,
+    "topic_lookup": 154,
+    "conversational_topic": 121
   },
   "generated_by_subject": {
-    "analytical_geometry": 120,
-    "physics": 132,
-    "mathematical_analysis": 130,
-    "introduction_to_information_security": 118,
-    "russian_statehood_fundamentals": 111,
-    "laboratory_physics": 90,
-    "information_security_fundamentals": 100,
-    "obzh": 100,
-    "Осипов": 99
+    "analytical_geometry": 353,
+    "physics": 365,
+    "mathematical_analysis": 363,
+    "introduction_to_information_security": 351,
+    "russian_statehood_fundamentals": 343,
+    "laboratory_physics": 228,
+    "information_security_fundamentals": 333,
+    "obzh": 333,
+    "Осипов": 331
   },
   "missing_authored_anchors": [
     {
@@ -50,18 +60,18 @@
       ]
     }
   ],
-  "typos": 6440,
+  "typos": 16440,
   "typo_operations": {
-    "delete": 1631,
-    "transpose": 1611,
-    "layout": 1296,
-    "duplicate": 1587,
-    "keyboard": 1570
+    "delete": 4148,
+    "transpose": 4101,
+    "layout": 3307,
+    "duplicate": 4045,
+    "keyboard": 4056
   },
   "splits": {
-    "train": 6081,
-    "validation": 882,
-    "test": 774
+    "train": 15291,
+    "validation": 2280,
+    "test": 2166
   },
   "files": {
     "existing.jsonl": {
@@ -69,12 +79,12 @@
       "sha256": "6649452b9df65252386e1db70ed7f4fd0a88ddac934da524d0f84bb18ecfe980"
     },
     "generated.jsonl": {
-      "rows": 1000,
-      "sha256": "02f90da4c5501695b7a8d65526c9496f6277487f566635fb4c57ffd29a8de27b"
+      "rows": 3000,
+      "sha256": "94c3143c68f2e96475da9f351509e6acc56275927c5c0dccd925a7d3e890056a"
     },
     "typos.jsonl": {
-      "rows": 6440,
-      "sha256": "2bd14dfa8a8bffc541371cd5b5c25fec8a7a9b8c42f8373f008a7358e730f492"
+      "rows": 16440,
+      "sha256": "8a262a369ea40c780ed9e1fa58e481e0c3006118be32e9f922fc440434a15a20"
     },
     "review.jsonl": {
       "rows": 1033,
@@ -85,16 +95,24 @@
       "sha256": "cdbc0cf0f753aeb0a046f191e6ff3937e2012c156bb729171a00c77d9cd8cfcd"
     },
     "train-examples.jsonl": {
-      "rows": 6081,
-      "sha256": "3ef910e761cc9d66417ceb2a63c11d78cb2d30af411292722d72f6f912353944"
+      "rows": 15291,
+      "sha256": "7fe208cd857bc694b3c59555b68e8e0400ebcb3818140e9ac61ab597457ec455"
     },
     "validation-examples.jsonl": {
-      "rows": 882,
-      "sha256": "c43df41293c7daaba84ec8843df6fd04f518bb5b9502244eb4c609265b0de6ab"
+      "rows": 2280,
+      "sha256": "56274910aa7824f6a34022ceddd58ad59752ffc2eb5583d8d5cbfe382cf12147"
     },
     "test-examples.jsonl": {
-      "rows": 774,
-      "sha256": "3f0444281f5eeb5336f9d9bd912cb6b60530a875fca9eb52c80d1df8c35abe73"
+      "rows": 2166,
+      "sha256": "06e2ec2103b88a6d8c348f494d595527877824f168df5990bde796c639956136"
+    },
+    "generated-extra-2000.jsonl": {
+      "rows": 2000,
+      "sha256": "51dfceffae48bd314a270de7d09ebb8c8928816c8758d224bc4be75cc58e6e9a"
+    },
+    "typos-extra.jsonl": {
+      "rows": 10000,
+      "sha256": "b25aa09ea9d13b220364888efe7974aacfbe0d8627043017268170ff33f6cea6"
     }
   },
   "limitations": [
@@ -102,5 +120,43 @@
     "generated_weak requires review",
     "review rows are not training positives",
     "v0.2 holdout subjects preserved"
-  ]
+  ],
+  "extension": {
+    "base_generated": 1000,
+    "added": 2000,
+    "added_typos": 10000,
+    "seed": 20261124,
+    "by_origin": {
+      "reverse_definition_extra": 100,
+      "list_retrieval": 126,
+      "reverse_definition": 23,
+      "definition_question": 93,
+      "formula_question": 135,
+      "qa_rephrase_extra": 112,
+      "definition_lookup": 22,
+      "qa_rewrite": 12,
+      "formula_lookup": 197,
+      "short_definition": 11,
+      "conversational_definition": 11,
+      "short_topic": 311,
+      "topic_question": 572,
+      "topic_lookup": 154,
+      "conversational_topic": 121
+    },
+    "by_subject": {
+      "analytical_geometry": 233,
+      "information_security_fundamentals": 233,
+      "introduction_to_information_security": 233,
+      "laboratory_physics": 138,
+      "mathematical_analysis": 233,
+      "obzh": 233,
+      "physics": 233,
+      "russian_statehood_fundamentals": 232,
+      "Осипов": 232
+    },
+    "unique_positive_passages": 625,
+    "candidate_pool": 9568,
+    "uniqueness": "normalized text; semantic equivalence not independently reviewed",
+    "all_added_labels": "generated_weak"
+  }
 }
