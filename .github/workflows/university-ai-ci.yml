@@ -1,0 +1,23 @@
+name: University AI indexing tests
+
+on:
+  push:
+    branches: [feature/university-ai]
+    paths: ['ai/**', 'subjects/**', 'cohorts/**', '.github/workflows/university-ai-ci.yml']
+  pull_request:
+    paths: ['ai/**', 'subjects/**', 'cohorts/**', '.github/workflows/university-ai-ci.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  indexing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s ai/tests -v
+      - run: python3 -m ai.indexing.build_index
