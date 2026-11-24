@@ -1,4 +1,4 @@
-name: University AI indexing, search, tokenizer, encoder and dataset tests
+name: University AI indexing, search, tokenizer, encoder, dataset and training tests
 
 on:
   push:
@@ -7,6 +7,15 @@ on:
   pull_request:
     paths: ['ai/**', 'subjects/**', 'cohorts/**', '.github/workflows/university-ai-ci.yml']
   workflow_dispatch:
+    inputs:
+      epochs:
+        description: Training epochs
+        default: '4'
+        type: string
+      max_steps:
+        description: Max batches per epoch (0 = all)
+        default: '0'
+        type: string
 
 permissions:
   contents: read
@@ -14,7 +23,7 @@ permissions:
 jobs:
   indexing:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,12 +39,18 @@ jobs:
       - run: python3 -m ai.tokenizer.train
       - run: python3 -m ai.model.smoke
       - run: python3 -m ai.training.build_dataset
+      - name: Train encoder pilot or full manual run
+        env:
+          EPOCHS: ${{ github.event.inputs.epochs || '2' }}
+          MAX_STEPS: ${{ github.event.inputs.max_steps || '80' }}
+        run: python3 -m ai.training.train --epochs "$EPOCHS" --max-steps "$MAX_STEPS"
       - uses: actions/upload-artifact@v4
         with:
-          name: university-ai-stage-06
+          name: university-ai-stage-07
           path: |
             ai/generated/tokenizer.json
             ai/generated/tokenizer-report.json
             ai/generated/encoder-report.json
             ai/generated/dataset/
+            ai/generated/trained/
           if-no-files-found: error
