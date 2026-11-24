@@ -20,7 +20,7 @@ def masked_batch(ids, mask, vocab_size, probability=.15):
     noisy[random_positions]=torch.randint(BYTE_OFFSET,vocab_size,(int(random_positions.sum()),),device=ids.device)
     return noisy,chosen
 
-def pretrain(model,tokenizer,rows,*,epochs,batch_size,device,seed=42,lr=3e-4):
+def pretrain(model,tokenizer,rows,*,epochs,batch_size,device,seed=42,lr=3e-4,amp=False):
     rng=random.Random(seed)
     optimizer=torch.optim.AdamW(model.parameters(),lr=lr,weight_decay=.01)
     texts=sorted(set(r["encoder_text"] for r in rows))
@@ -40,10 +40,11 @@ def pretrain(model,tokenizer,rows,*,epochs,batch_size,device,seed=42,lr=3e-4):
             noisy,chosen=masked_batch(inp["input_ids"],inp["attention_mask"],model.config.vocab_size)
             if not chosen.any():
                 continue
-            h=model.hidden_states(noisy,inp["attention_mask"])
-            # Project only masked positions, not all 512 positions.
-            logits=F.linear(h[chosen],model.token_embedding.weight)
-            loss=F.cross_entropy(logits,inp["input_ids"][chosen])
+            with torch.autocast("cuda",dtype=torch.bfloat16,enabled=amp and torch.cuda.is_bf16_supported()):
+                h=model.hidden_states(noisy,inp["attention_mask"])
+                # Project only masked positions, not all 512 positions.
+                logits=F.linear(h[chosen],model.token_embedding.weight)
+                loss=F.cross_entropy(logits,inp["input_ids"][chosen])
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(),1.,error_if_nonfinite=True)

@@ -27,14 +27,14 @@ def encode(model,tokenizer,texts,device,batch_size=16):
     return out
 
 class SemanticTeacher:
-    def __init__(self,rows,examples,device="cpu",cache_dir=None):
+    def __init__(self,rows,examples,device="cpu",cache_dir=None,*,model_name=MODEL,revision=REVISION):
         self.doc_ids={r["id"]:i for i,r in enumerate(rows)}
         self.query_ids={e["id"]:i for i,e in enumerate(examples)}
         dataset_hash=hashlib.sha256(json.dumps({
             "documents":[(r["id"],r["encoder_text"]) for r in rows],
             "queries":[(e["id"],e["query"]) for e in examples],
         },ensure_ascii=False,separators=(",",":")).encode("utf-8")).hexdigest()
-        metadata={"model":MODEL,"revision":REVISION,"dataset_sha256":dataset_hash,
+        metadata={"model":model_name,"revision":revision,"dataset_sha256":dataset_hash,
                   "document_ids":list(self.doc_ids),"query_ids":list(self.query_ids)}
         cache_path=Path(cache_dir)/"e5-train-embeddings.pt" if cache_dir else None
         manifest_path=cache_path.with_suffix(".manifest.json") if cache_path else None
@@ -49,10 +49,13 @@ class SemanticTeacher:
                 print(f"E5 cache hit: {cache_path}",flush=True)
                 return
         from transformers import AutoModel,AutoTokenizer
-        tok=AutoTokenizer.from_pretrained(MODEL,revision=REVISION,trust_remote_code=False)
-        model=AutoModel.from_pretrained(MODEL,revision=REVISION,trust_remote_code=False,use_safetensors=True).to(device).eval()
+        if str(device).startswith("cuda"):
+            torch.cuda.reset_peak_memory_stats(device)
+        tok=AutoTokenizer.from_pretrained(model_name,revision=revision,trust_remote_code=False)
+        model=AutoModel.from_pretrained(model_name,revision=revision,trust_remote_code=False,use_safetensors=True).to(device).eval()
         self.docs=encode(model,tok,["passage: "+r["encoder_text"] for r in rows],device)
         self.queries=encode(model,tok,["query: "+e["query"] for e in examples],device)
+        self.peak_mib = torch.cuda.max_memory_allocated(device)/2**20 if str(device).startswith("cuda") else None
         del model,tok
         if str(device).startswith("cuda"):
             torch.cuda.empty_cache()

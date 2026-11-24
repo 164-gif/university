@@ -2,7 +2,7 @@
 import torch
 from torch.nn import functional as F
 
-def contrastive_loss(logits, positive, weights):
+def contrastive_loss(logits, positive, weights, *, per_query=False):
     """weights: 0=ignore, (0,1]=negative confidence; positives always weight 1."""
     positive=positive.bool()
     if not positive.any(dim=1).all():
@@ -10,7 +10,8 @@ def contrastive_loss(logits, positive, weights):
     weights=torch.where(positive,torch.ones_like(weights),weights)
     numerator=torch.logsumexp(logits.masked_fill(~positive,-torch.inf),dim=1)
     denominator=torch.logsumexp(logits+weights.clamp_min(1e-12).log().masked_fill(weights<=0,-torch.inf),dim=1)
-    return (denominator-numerator).mean()
+    losses = denominator-numerator
+    return losses if per_query else losses.mean()
 
 def teacher_loss(logits, teacher_scores, pairs, *, temperature=2.0):
     """KL on a small, explicitly selected list of lexical teacher candidates.

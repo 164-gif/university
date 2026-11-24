@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>University AI v0.3 · экспериментальный поиск</title>
+<style>
+body { margin: 2rem auto; padding: 0 1rem; max-width: 48rem; font: 1rem/1.55 system-ui, sans-serif; }
+form { display: flex; flex-wrap: wrap; gap: .6rem; align-items: end; }
+label { display: grid; flex: 1 1 16rem; }
+input, button { padding: .6rem; font: inherit; }
+li { margin-bottom: 1.5rem; }
+li p { white-space: pre-wrap; }
+</style>
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<h1>Экспериментальный поиск University AI</h1>
+<form id="search">
+<label>Вопрос<input id="query" required maxlength="2000"></label>
+<button id="submit" disabled>Найти фрагменты</button>
+</form>
+<p id="status" role="status">Загружаю локальную модель…</p>
+<ol id="results"></ol>
+</body>
+</html>
