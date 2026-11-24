@@ -150,6 +150,18 @@ jobs:
             echo "::warning::AI beta unavailable for this build; publishing regular website without unverified or stale AI assets."
           fi
 
+      - name: Include University AI v0.3
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V03_BUNDLE_SHA256: 156e2737cda4bff85d82e6a2b61b451c24c42a4ca82e6b600758784d763bea80
+        run: |
+          set -euo pipefail
+          bundle="$RUNNER_TEMP/university-ai-v03-browser.zip"
+          gh release download university-ai-v0.3 --repo "$GITHUB_REPOSITORY" \
+            --pattern university-ai-v03-browser.zip --output "$bundle"
+          printf '%s  %s\n' "$V03_BUNDLE_SHA256" "$bundle" | sha256sum --check
+          python3 -m zipfile -e "$bundle" _site/ai-v03
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
