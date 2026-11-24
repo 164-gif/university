@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark">
+<title>ИИ-поиск (бета) — University Notes</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="ai-search.css"></head>
+<body>
+<header class="topbar"><a class="brand" href="./">University Notes</a><a class="ai-back" href="./">Обычный поиск и конспекты</a></header>
+<main class="ai-main"><section class="article ai-panel">
+<div class="ai-kicker">UNIVERSITY AI · V0.2 · БЕТА</div><h1>ИИ-поиск</h1>
+<p class="ai-intro">Задайте вопрос своими словами. Модель подбирает оригинальные фрагменты учебных материалов, не генерируя новых ответов.</p>
+<p class="ai-note">Эксперимент: качество пока ниже обычного поиска. Проверяйте результат по источнику. Сходство не является вероятностью правильности. Запросы не отправляются на сервер. Модель и индекс загружаются при открытии поиска.</p>
+<form id="ai-form"><label for="ai-query">Ваш вопрос</label><div class="ai-input-row"><input id="ai-query" type="search" maxlength="1000" required autocomplete="off" placeholder="Как найти угол между векторами?"><button id="ai-submit" disabled>Найти</button></div>
+<div class="ai-filters"><label>Учебный набор<select id="ai-cohort" disabled><option value="ib-2026-1kurs">ИБ-2026 — 1 курс</option></select></label><label>Предмет<select id="ai-subject" disabled><option value="">Все предметы</option></select></label></div></form>
+<p id="ai-status" role="status" aria-live="polite">Подготовка модели…</p><ol id="ai-results"></ol>
+</section></main><script type="module" src="ai-search.mjs"></script></body></html>

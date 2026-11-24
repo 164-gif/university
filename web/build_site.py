@@ -196,6 +196,11 @@ def main() -> None:
         "numbering.js",
         "subject-labels.js",
         "navigation-search.js",
+        "ai-search.html",
+        "ai-search.css",
+        "ai-search.mjs",
+        "ai-search-core.mjs",
+        "ai-search-tokenizer.mjs",
     ):
         shutil.copy2(WEB / name, OUT / name)
 

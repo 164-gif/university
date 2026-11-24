@@ -61,6 +61,23 @@ jobs:
           print('Math source, Git dates and versioned frontend: OK')
           PY
 
+      - name: Install experimental AI runtime
+        run: |
+          npm ci --prefix ai/browser-runtime
+          python3 -m pip install numpy==2.2.6 onnxruntime==1.23.2
+      - name: Build AI search index
+        run: python3 -m ai.publish_search
+      - name: AI ranking and tokenizer tests
+        run: node --test web/tests/ai-search.test.mjs
+      - name: Chromium inference smoke test
+        run: |
+          npm install --prefix ai/browser-runtime --no-save --package-lock=false playwright-core@1.51.1
+          python3 -m http.server 8123 --bind 127.0.0.1 --directory _site &
+          server=$!
+          trap 'kill "$server"' EXIT
+          for i in {1..20}; do curl -fsS http://127.0.0.1:8123/ai-search.html >/dev/null && break; sleep 1; done
+          node ai/browser-runtime/smoke.mjs
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
