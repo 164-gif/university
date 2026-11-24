@@ -15,7 +15,7 @@ def tokenizer_sha256(path):
 
 def save_checkpoint(path, model, tokenizer_path, *, trained_steps=0, optimizer=None,
                    scheduler=None, scaler=None, epoch=0, best_metrics=None,
-                   dataset_sha256=None, config=None, python_rng=None):
+                   dataset_sha256=None, config=None, python_rng=None, report=None):
     if type(trained_steps) is not int or trained_steps < 0:
         raise ValueError("invalid trained_steps")
     if BPETokenizer.load(Path(tokenizer_path)).vocab_size != model.config.vocab_size:
@@ -29,7 +29,7 @@ def save_checkpoint(path, model, tokenizer_path, *, trained_steps=0, optimizer=N
                 "trained_steps":trained_steps,
                 "state_dict":model.state_dict(), "epoch":int(epoch),
                 "best_metrics":best_metrics or {}, "dataset_sha256":dataset_sha256,
-                "training_config":config or {},
+                "training_config":config or {}, "report":report or {},
                 "rng": {"torch":torch.get_rng_state(),
                         "cuda":torch.cuda.get_rng_state_all() if torch.cuda.is_available() else [],
                         "python":python_rng.getstate() if python_rng else None}}

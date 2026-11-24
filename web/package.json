@@ -1,0 +1,12 @@
+{
+  "name": "university-static-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:ai-tokenizer": "node ai-search-tokenizer.test.mjs",
+    "serve:ai": "python3 -m http.server 8000"
+  },
+  "dependencies": {
+    "onnxruntime-web": "1.23.2"
+  }
+}

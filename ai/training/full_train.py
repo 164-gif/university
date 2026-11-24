@@ -6,6 +6,8 @@ import math
 from pathlib import Path
 import random
 import contextlib
+from functools import lru_cache
+import subprocess
 from time import perf_counter
 
 import torch
@@ -42,6 +44,14 @@ def write_report(out,report):
     tmp.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     tmp.replace(p)
 
+def gpu_temperature(device):
+    if device.type!="cuda": return None
+    try:
+        result=subprocess.run(["nvidia-smi","--query-gpu=temperature.gpu","--format=csv,noheader,nounits"],
+                              check=True,capture_output=True,text=True,timeout=3)
+        return int(result.stdout.splitlines()[0])
+    except Exception: return None
+
 def run(args):
     if args.epochs<1 or args.mlm_epochs<0 or args.batch_size<2 or args.threads<1 or args.lr<=0 or args.grad_accum<1:
         raise ValueError("invalid training config")
@@ -62,6 +72,10 @@ def run(args):
     if fit["fit_scope"]!="train_subjects_only" or fit["tokenizer_sha256"]!=tokenizer_sha256(tok_path):
         raise ValueError("expected train-only BPE")
     tokenizer=BPETokenizer.load(tok_path)
+    base_encode=tokenizer.encode
+    @lru_cache(maxsize=120000)
+    def encoded_once(text): return tuple(base_encode(text))
+    tokenizer.encode=lambda text:list(encoded_once(text))
     data,manifest=read_dataset(root/"dataset",tok_path,tokenizer)
     cfg=EncoderConfig(vocab_size=tokenizer.vocab_size,max_length=manifest["max_length"])
     train_rows,train_examples=data["train"]
@@ -71,14 +85,25 @@ def run(args):
     model=UniversityEncoder(cfg).to(device)
     out=root/"trained"
     out.mkdir(parents=True,exist_ok=True)
+    try:
+        from torch.utils.tensorboard import SummaryWriter
+        tensorboard=SummaryWriter(log_dir=out/"tensorboard")
+    except ImportError:
+        tensorboard=None
+    epoch_log=out/"training.jsonl"
     start=perf_counter()
     report={"status":"running","epochs_requested":args.epochs,"mlm_epochs_requested":args.mlm_epochs,
             "seed":args.seed,"teacher":MODEL if not args.no_teacher else None,
             "teacher_revision":REVISION if not args.no_teacher else None,
+            "training_parameters":{"device":str(device),"precision":args.precision,
+                "batch_size":args.batch_size,"gradient_accumulation":args.grad_accum,
+                "learning_rate":args.lr,"semantic_weight":args.semantic_weight,
+                "optimizer":"AdamW fused when supported","gradient_clip_norm":1.0,
+                "mlm_mask_probability":0.15,"torch_compile_requested":args.compile},
             "config":cfg.to_dict(),"parameters":model.parameter_count(),
             "tokenizer_sha256":tokenizer_sha256(tok_path),"dataset_sha256":aug["dataset_manifest_sha256"],
             "variant_count":aug["variant_count"],"base_queries":len(train_examples),
-            "augmentation":aug["augmentation"],"history":[]}
+            "augmentation":aug["augmentation"],"tokenization_cache_capacity":120000,"history":[]}
     write_report(out,report)
     report["initial_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
     report["mlm"]=pretrain(model,tokenizer,train_rows,epochs=args.mlm_epochs,batch_size=args.batch_size,
@@ -90,7 +115,7 @@ def run(args):
                         config={"phase":"mlm","epochs":args.mlm_epochs,"masking_probability":.15})
     report["post_mlm_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
     write_report(out,report)
-    teacher=None if args.no_teacher else SemanticTeacher(train_rows,train_examples,device)
+    teacher=None if args.no_teacher else SemanticTeacher(train_rows,train_examples,device,cache_dir=root/"teacher-cache")
     corpus=TrainingCorpus(train_rows,train_examples,tokenizer)
     try:
         optimizer=torch.optim.AdamW(model.parameters(),lr=args.lr,weight_decay=.01,
@@ -134,8 +159,11 @@ def run(args):
         except Exception as exc:
             print(f"torch.compile unavailable: {type(exc).__name__}: {exc}",flush=True)
     for epoch in range(first_epoch,args.epochs+1):
+        epoch_start=perf_counter()
         model.train()
         losses=[]
+        contrasts=[]
+        lexical=[]
         semantic=[]
         for examples in corpus.batches(rng,args.batch_size,0):
             ids,pos,w,ts,pairs=corpus.prepare(examples,rng,device)
@@ -155,7 +183,9 @@ def run(args):
                 sem=semantic_loss(logits,scores,pos,w)
             else:
                 sem=logits.sum()*0
-            loss=contrastive_loss(logits,pos,w)+.1*teacher_loss(logits,ts,pairs)+args.semantic_weight*sem
+            c_loss=contrastive_loss(logits,pos,w)
+            l_loss=.1*teacher_loss(logits,ts,pairs)
+            loss=c_loss+l_loss+args.semantic_weight*sem
             loss=loss/args.grad_accum
             if not torch.isfinite(loss):
                 raise RuntimeError("nonfinite loss")
@@ -167,13 +197,23 @@ def run(args):
             step+=1
             seen.update((e["id"],qtext) for e,qtext in zip(examples,query_texts))
             losses.append(loss.item()*args.grad_accum)
+            contrasts.append(c_loss.item()); lexical.append(l_loss.item())
             semantic.append(sem.item())
         if len(losses)%args.grad_accum:
             scaler.unscale_(optimizer); torch.nn.utils.clip_grad_norm_(model.parameters(),1.,error_if_nonfinite=True)
             scaler.step(optimizer); scaler.update(); scheduler.step()
         val=evaluate(model,tokenizer,*data["validation"],device=device)
+        epoch_seconds=perf_counter()-epoch_start
+        vram=torch.cuda.max_memory_allocated(device)/1024**2 if device.type=="cuda" else None
+        temperature=gpu_temperature(device)
         record={"epoch":epoch,"steps":step,"loss":sum(losses)/len(losses),
-                "semantic_loss":sum(semantic)/len(semantic),"validation":val}
+                "contrastive_loss":sum(contrasts)/len(contrasts),
+                "lexical_distillation_loss":sum(lexical)/len(lexical),
+                "semantic_loss":sum(semantic)/len(semantic),
+                "learning_rate":optimizer.param_groups[0]["lr"],
+                "queries_per_second":len(train_examples)/max(epoch_seconds,1e-9),
+                "epoch_seconds":epoch_seconds,"vram_peak_mib":vram,"gpu_temperature_c":temperature,
+                "validation":val}
         report["history"].append(record)
         score=val["0.0"]["mrr_at5"]
         if score>best:
@@ -182,13 +222,27 @@ def run(args):
             save_checkpoint(checkpoint,model._orig_mod if hasattr(model,"_orig_mod") else model,
                             tok_path,trained_steps=step,epoch=epoch,
                             best_metrics={"mrr_at5":best,"epoch":best_epoch},
-                            dataset_sha256=aug["dataset_manifest_sha256"])
+                            dataset_sha256=aug["dataset_manifest_sha256"],
+                            config=vars(args),report=report,python_rng=rng)
         report.update({"epochs_completed":epoch,"best_epoch":best_epoch,"total_steps":step,
-                       "distinct_query_variants_seen":len(seen),"elapsed_seconds":round(perf_counter()-start,2)})
+                       "distinct_query_variants_seen":len(seen),"tokenized_sequences_cached":encoded_once.cache_info().currsize,
+                       "elapsed_seconds":round(perf_counter()-start,2),
+                       "estimated_seconds_remaining":(perf_counter()-start)/epoch*max(0,args.epochs-epoch),
+                       "best_checkpoint":str(checkpoint),"best_validation_mrr_at5":best})
         write_report(out,report)
         save_checkpoint(last_checkpoint,model._orig_mod if hasattr(model,"_orig_mod") else model,tok_path,trained_steps=step,optimizer=optimizer,scheduler=scheduler,
                         scaler=scaler,epoch=epoch,best_metrics={"mrr_at5":best,"epoch":best_epoch},
-                        dataset_sha256=aug["dataset_manifest_sha256"],python_rng=rng)
+                        dataset_sha256=aug["dataset_manifest_sha256"],python_rng=rng,
+                        config=vars(args),report=report)
+        with epoch_log.open("a",encoding="utf-8") as stream:
+            stream.write(json.dumps(record,ensure_ascii=False)+"\n")
+        if tensorboard:
+            for key in ("loss","contrastive_loss","lexical_distillation_loss","semantic_loss","learning_rate",
+                        "queries_per_second","epoch_seconds","vram_peak_mib","gpu_temperature_c"):
+                if record.get(key) is not None: tensorboard.add_scalar("train/"+key,record[key],epoch)
+            for key in ("top1","top5","mrr_at5"):
+                tensorboard.add_scalar("validation/"+key,val["0.0"][key],epoch)
+            tensorboard.flush()
         print("EPOCH="+json.dumps(record),flush=True)
     model,best_steps=load_checkpoint(checkpoint,tok_path,map_location=device)
     val=evaluate(model,tokenizer,*data["validation"],device=device)
@@ -202,6 +256,7 @@ def run(args):
                    "checkpoint_sha256":hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
                    "seconds":round(perf_counter()-start,2)})
     write_report(out,report)
+    if tensorboard: tensorboard.close()
     print("FINAL="+json.dumps({k:v for k,v in report.items() if k!="history"},ensure_ascii=False),flush=True)
     return report
 

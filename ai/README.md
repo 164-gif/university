@@ -35,5 +35,6 @@ python3 -m unittest discover -s ai/tests -v
 - [Датасет и разбиение выборок](training/README.md)
 - [Контрастивное обучение и оценка](training/TRAINING.md)
 - [Полный эксперимент: 50 эпох](training/FULL_TRAINING.md)
+- [GPU benchmark и сравнение качества](training/FULL_TRAINING.md#артефакты-и-фактический-эксперимент)
 
 Основание: AGENTS.md, docs/COHORT_STRUCTURE.md, docs/FACT_CHECK_POLICY.md.

@@ -1,5 +1,7 @@
 """Frozen multilingual E5 teacher, cached on TRAIN only."""
 from pathlib import Path
+import hashlib
+import json
 import torch
 from torch.nn import functional as F
 
@@ -25,17 +27,44 @@ def encode(model,tokenizer,texts,device,batch_size=16):
     return out
 
 class SemanticTeacher:
-    def __init__(self,rows,examples,device="cpu"):
+    def __init__(self,rows,examples,device="cpu",cache_dir=None):
+        self.doc_ids={r["id"]:i for i,r in enumerate(rows)}
+        self.query_ids={e["id"]:i for i,e in enumerate(examples)}
+        dataset_hash=hashlib.sha256(json.dumps({
+            "documents":[(r["id"],r["encoder_text"]) for r in rows],
+            "queries":[(e["id"],e["query"]) for e in examples],
+        },ensure_ascii=False,separators=(",",":")).encode("utf-8")).hexdigest()
+        metadata={"model":MODEL,"revision":REVISION,"dataset_sha256":dataset_hash,
+                  "document_ids":list(self.doc_ids),"query_ids":list(self.query_ids)}
+        cache_path=Path(cache_dir)/"e5-train-embeddings.pt" if cache_dir else None
+        manifest_path=cache_path.with_suffix(".manifest.json") if cache_path else None
+        if cache_path and cache_path.exists() and manifest_path.exists():
+            cache_manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+            cache_hash=hashlib.sha256(cache_path.read_bytes()).hexdigest()
+            cached=torch.load(cache_path,map_location="cpu",weights_only=True)
+            if (cache_hash==cache_manifest.get("cache_sha256") and cache_manifest.get("metadata")==metadata
+                    and cached.get("metadata")==metadata and cached["docs"].shape[0]==len(rows)
+                    and cached["queries"].shape[0]==len(examples)):
+                self.docs=cached["docs"].float(); self.queries=cached["queries"].float()
+                print(f"E5 cache hit: {cache_path}",flush=True)
+                return
         from transformers import AutoModel,AutoTokenizer
         tok=AutoTokenizer.from_pretrained(MODEL,revision=REVISION,trust_remote_code=False)
         model=AutoModel.from_pretrained(MODEL,revision=REVISION,trust_remote_code=False,use_safetensors=True).to(device).eval()
-        self.doc_ids={r["id"]:i for i,r in enumerate(rows)}
-        self.query_ids={e["id"]:i for i,e in enumerate(examples)}
         self.docs=encode(model,tok,["passage: "+r["encoder_text"] for r in rows],device)
         self.queries=encode(model,tok,["query: "+e["query"] for e in examples],device)
         del model,tok
         if str(device).startswith("cuda"):
             torch.cuda.empty_cache()
+        if cache_path:
+            cache_path.parent.mkdir(parents=True,exist_ok=True)
+            tmp=cache_path.with_suffix(cache_path.suffix+".tmp")
+            torch.save({"metadata":metadata,"docs":self.docs,"queries":self.queries},tmp)
+            tmp.replace(cache_path)
+            manifest_tmp=manifest_path.with_suffix(manifest_path.suffix+".tmp")
+            manifest_tmp.write_text(json.dumps({"metadata":metadata,
+                "cache_sha256":hashlib.sha256(cache_path.read_bytes()).hexdigest()},ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+            manifest_tmp.replace(manifest_path)
 
     def scores(self,examples,ids,device):
         q=self.queries[[self.query_ids[e["id"]] for e in examples]]

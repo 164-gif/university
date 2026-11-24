@@ -20,5 +20,14 @@ def collate_texts(tokenizer, texts, config, *, device=None, pad_to=None):
         length = pad_to
     ids = [row + [PAD]*(length-len(row)) for row in rows]
     masks = [[1]*len(row)+[0]*(length-len(row)) for row in rows]
-    return {"input_ids":torch.tensor(ids,dtype=torch.long,device=device),
-            "attention_mask":torch.tensor(masks,dtype=torch.long,device=device)}
+    input_ids=torch.tensor(ids,dtype=torch.long)
+    attention_mask=torch.tensor(masks,dtype=torch.long)
+    target=torch.device(device or "cpu")
+    if target.type=="cuda":
+        # Pinned host buffers enable non-blocking H2D copies.
+        input_ids=input_ids.pin_memory().to(target,non_blocking=True)
+        attention_mask=attention_mask.pin_memory().to(target,non_blocking=True)
+    else:
+        input_ids=input_ids.to(target)
+        attention_mask=attention_mask.to(target)
+    return {"input_ids":input_ids,"attention_mask":attention_mask}
