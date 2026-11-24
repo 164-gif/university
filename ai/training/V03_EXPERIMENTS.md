@@ -2,6 +2,8 @@
 
 Ветка экспериментов `feature/university-ai-v03-training` основана на GPU ветке. Данные `ai/data/v03` импортированы без изменений из `eeb8dc58761a1ac339485602cc9072b686f39901`. Внутренний `source_commit` `feaa746d2e9a0662ad2fc0748da621f890a50332` указывает на исходные учебные материалы, из которых собраны фрагменты.
 
+Измерения приведены в [V03_RESULTS.md](V03_RESULTS.md).
+
 ## Как воспроизвести
 
 Понадобятся Linux, CUDA и Python окружение University AI. Для экспорта требуются `onnx` и `onnxruntime`. Проверка браузера использует Chromium, Node с поддержкой WebSocket и зависимости `npm ci --prefix web`.

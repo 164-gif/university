@@ -79,7 +79,7 @@ def run(args):
     run_command("ai.training.v03_export",["--data",args.data,"--checkpoint",folder/"encoder-best.pt",
                 "--tokenizer",folder/"tokenizer.json","--output",export],root/"export.log")
     subprocess.run(["node","web/v03-browser-check.mjs",str(export/"browser")],check=True)
-    run_command("ai.training.v03_benchmark",["--output",root/"benchmark-v03.json"],root/"benchmark-v03.log")
+    run_command("ai.training.v03_benchmark",["--output",root/"benchmark-v03.json","--data",args.data],root/"benchmark-v03.log")
 
 
 if __name__=="__main__":

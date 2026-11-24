@@ -123,7 +123,7 @@ try {
       chromium: navigator.userAgent };
   })()`);
   assert.equal(results.parity, true);
-  assert.equal(results.maxError < 1e-3, true);
+  assert.ok(results.maxError < 1e-3, `CPU/WASM embedding delta: ${results.maxError}`);
   assert.deepEqual(results.resources, [origin]);
   assert.equal(results.shapes.length, 2);
   assert.equal(results.shapes[0][0], 2);

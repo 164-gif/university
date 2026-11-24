@@ -11,7 +11,6 @@ import numpy as np
 import onnx
 from onnx import numpy_helper
 import onnxruntime as ort
-from onnxruntime.quantization import QuantType, quantize_dynamic
 from onnxruntime.transformers.float16 import convert_float_to_float16
 import torch
 
@@ -61,40 +60,51 @@ def cached_index(session,tok,rows,model,tokenizer,cache):
 
 
 def quantized(source, destination):
-    # Dynamic quantization of the linear operations. Compress the large
-    # token table separately and dequantize only the gathered rows.
-    temporary = destination.with_suffix(".tmp.onnx")
-    quantize_dynamic(source,temporary,weight_type=QuantType.QInt8,per_channel=True,op_types_to_quantize=["MatMul"])
-    graph = onnx.load(temporary)
-    table = next(tensor for tensor in graph.graph.initializer if tensor.name.endswith("token_embedding.weight"))
-    values = numpy_helper.to_array(table)
-    scales = np.maximum(np.max(np.abs(values),axis=1)/127,1e-10).astype(np.float32)
-    compressed = np.rint(values/scales[:,None]).clip(-127,127).astype(np.int8)
-    graph.graph.initializer.remove(table)
-    graph.graph.initializer.extend([numpy_helper.from_array(compressed,table.name),
-                                   numpy_helper.from_array(scales,"token_table_scale"),
-                                   numpy_helper.from_array(np.array([-1],np.int64),"token_scale_axis")])
+    """Store int8 weights and keep float activations consistent across runtimes."""
+    graph = onnx.load(source)
+    weights = {item.name:item for item in graph.graph.initializer}
     nodes = []
-    gather_found = False
+    stored = {}
+    graph.graph.initializer.append(numpy_helper.from_array(np.array([-1],np.int64),"quant_scale_axis"))
     for node in graph.graph.node:
-        if node.op_type=="Gather" and node.input[0]==table.name:
-            gather_found = True
+        index = 0 if node.op_type=="Gather" else 1
+        if node.op_type not in ("MatMul","Gemm","Gather") or node.input[index] not in weights:
+            nodes.append(node)
+            continue
+        name = node.input[index]
+        original = weights[name]
+        values = numpy_helper.to_array(original)
+        if values.ndim!=2 or values.dtype!=np.float32:
+            nodes.append(node)
+            continue
+        transposed = any(attr.name=="transB" and attr.i for attr in node.attribute)
+        axis = 0 if node.op_type=="Gather" or transposed else 1
+        scales = np.maximum(np.max(np.abs(values),axis=1-axis)/127,1e-10).astype(np.float32)
+        if name not in stored:
+            graph.graph.initializer.remove(original)
+            broadcast = scales[:,None] if axis==0 else scales[None,:]
+            compressed = np.rint(values/broadcast).clip(-127,127).astype(np.int8)
+            graph.graph.initializer.extend([numpy_helper.from_array(compressed,name+"_int8"),
+                                           numpy_helper.from_array(scales,name+"_scale")])
+            stored[name] = axis
+        if node.op_type=="Gather":
             output = node.output[0]
+            node.input[0] = name+"_int8"
             node.output[0] = output+"_int8"
             nodes.extend([node,
                           onnx.helper.make_node("Cast",[node.output[0]],[output+"_fp32"],to=onnx.TensorProto.FLOAT),
-                          onnx.helper.make_node("Gather",["token_table_scale",node.input[1]],[output+"_scale"]),
-                          onnx.helper.make_node("Unsqueeze",[output+"_scale","token_scale_axis"],[output+"_scale_row"]),
+                          onnx.helper.make_node("Gather",[name+"_scale",node.input[1]],[output+"_scale"]),
+                          onnx.helper.make_node("Unsqueeze",[output+"_scale","quant_scale_axis"],[output+"_scale_row"]),
                           onnx.helper.make_node("Mul",[output+"_fp32",output+"_scale_row"],[output])])
         else:
+            output = node.output[0]+"_weight_fp32"
+            nodes.append(onnx.helper.make_node("DequantizeLinear",[name+"_int8",name+"_scale"],[output],axis=axis))
+            node.input[1] = output
             nodes.append(node)
-    if not gather_found:
-        raise ValueError("token embedding Gather unavailable")
     del graph.graph.node[:]
     graph.graph.node.extend(nodes)
     onnx.checker.check_model(graph)
     onnx.save(graph,destination)
-    temporary.unlink()
 
 
 def validate_export(args):

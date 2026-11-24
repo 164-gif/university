@@ -56,6 +56,8 @@ class Ranking:
         for example, item in zip(self.examples, per_query):
             families[example.get("parent_id") or example["id"]].append(item)
             if detailed:
+                if example.get("label"):
+                    subsets[f"label_{example['label']}"].append(item)
                 edits = [e["type"] for e in example.get("edits",[])]
                 subsets["typos" if edits else "clean"].append(item)
                 if edits:

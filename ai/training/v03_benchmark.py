@@ -7,8 +7,9 @@ import torch
 
 from ai.model.config import EncoderConfig
 from ai.model.encoder import UniversityEncoder
-from ai.training.v03_data import write_json
-from ai.training.v03_experiments import device_for_cuda
+from ai.training.v03_data import load_rows, write_json
+from ai.training.semantic_teacher import MODEL, REVISION
+from ai.training.v03_experiments import BASE, BASE_REVISION, device_for_cuda
 
 
 def measure(config, batch_size, compiled):
@@ -51,11 +52,40 @@ def measure(config, batch_size, compiled):
             "stable":bool(torch.stack([x[1] for x in steps]).isfinite().all())}
 
 
-def run(output):
+def teacher_memory(data):
+    """Measure equal-sized FP32 batches independently of cached embeddings."""
+    from transformers import AutoModel, AutoTokenizer
+
+    train_rows = [row for row in load_rows(data,"passages.jsonl") if row["split"]=="train"]
+    texts = sorted(train_rows,key=lambda row:-len(row["encoder_text"]))[:16]
+    device = torch.device("cuda")
+    results = []
+    for name,revision in ((MODEL,REVISION),(BASE,BASE_REVISION)):
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats(device)
+        tokenizer = AutoTokenizer.from_pretrained(name,revision=revision,local_files_only=True,
+                                                  trust_remote_code=False)
+        model = AutoModel.from_pretrained(name,revision=revision,local_files_only=True,
+                                          trust_remote_code=False,use_safetensors=True).to(device).eval()
+        inputs = tokenizer(["passage: "+row["encoder_text"] for row in texts],padding=True,
+                           truncation=True,max_length=512,return_tensors="pt").to(device)
+        with torch.inference_mode():
+            result = model(**inputs).last_hidden_state
+        torch.cuda.synchronize()
+        results.append({"model":name,"revision":revision,"precision":"FP32",
+                        "input_shape":list(inputs["input_ids"].shape),
+                        "peak_mib":torch.cuda.max_memory_allocated(device)/2**20})
+        del model,inputs,result
+    return results
+
+
+def run(output, data):
     device_for_cuda()
     config = EncoderConfig(vocab_size=16384,hidden_size=256,num_layers=6,num_heads=8,
                            embedding_size=256,intermediate_size=1024)
-    cases = []
+    report = {"device":torch.cuda.get_device_name(),"config":config.to_dict(),
+              "teacher_memory":teacher_memory(data),"cases":[]}
+    cases = report["cases"]
     for batch,compiled in [(16,False),(32,False),(48,False),(64,False),(96,False),(48,True)]:
         torch.cuda.empty_cache()
         try:
@@ -63,11 +93,13 @@ def run(output):
         except Exception as exc:
             result = {"batch":batch,"compiled":compiled,"error":f"{type(exc).__name__}: {exc}"}
         cases.append(result)
-        write_json(output,{"device":torch.cuda.get_device_name(),"config":config.to_dict(),"cases":cases})
+        write_json(output,report)
         print(result,flush=True)
 
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output",type=Path,required=True)
-    run(parser.parse_args().output)
+    parser.add_argument("--data",type=Path,default=Path("ai/data/v03"))
+    args = parser.parse_args()
+    run(args.output,args.data)
