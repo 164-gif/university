@@ -1,4 +1,4 @@
-name: University AI indexing, search, tokenizer and encoder tests
+name: University AI indexing, search, tokenizer, encoder and dataset tests
 
 on:
   push:
@@ -29,11 +29,13 @@ jobs:
       - run: python3 -m ai.evaluation.evaluate
       - run: python3 -m ai.tokenizer.train
       - run: python3 -m ai.model.smoke
+      - run: python3 -m ai.training.build_dataset
       - uses: actions/upload-artifact@v4
         with:
-          name: university-tokenizer-and-encoder-report
+          name: university-ai-stage-06
           path: |
             ai/generated/tokenizer.json
             ai/generated/tokenizer-report.json
             ai/generated/encoder-report.json
+            ai/generated/dataset/
           if-no-files-found: error
