@@ -1,0 +1,106 @@
+{
+  "format": "university-question-bank-v1",
+  "source_commit": "feaa746d2e9a0662ad2fc0748da621f890a50332",
+  "seed": 42,
+  "requested_generated": 1000,
+  "existing_occurrences": 1508,
+  "existing_unique": 1330,
+  "existing_labeled": 297,
+  "existing_review": 1033,
+  "generated": 1000,
+  "generated_by_origin": {
+    "assistant_authored": 119,
+    "reverse_definition": 382,
+    "definition_question": 316,
+    "formula_question": 76,
+    "qa_rewrite": 9,
+    "topic_question": 98
+  },
+  "generated_by_subject": {
+    "analytical_geometry": 120,
+    "physics": 132,
+    "mathematical_analysis": 130,
+    "introduction_to_information_security": 118,
+    "russian_statehood_fundamentals": 111,
+    "laboratory_physics": 90,
+    "information_security_fundamentals": 100,
+    "obzh": 100,
+    "Осипов": 99
+  },
+  "missing_authored_anchors": [
+    {
+      "subject": "analytical_geometry",
+      "file": "07 - Векторное произведение.md",
+      "anchor": "Вектор $\\vec c$ называется векторным произведением",
+      "questions": [
+        "Как направлен результат векторного умножения относительно обоих исходных векторов?",
+        "Какая тройка образуется множителями и результатом векторного произведения?",
+        "Как определить направление векторного произведения по ориентации тройки?",
+        "Что представляет собой результат умножения векторов векторным способом?"
+      ]
+    },
+    {
+      "subject": "mathematical_analysis",
+      "file": "02 - Операции над множествами и бинарные отношения.md",
+      "anchor": "(a,b)\\in R,\\quad(b,c)\\in R\\Rightarrow(a,c)\\in R",
+      "questions": [
+        "Какое свойство отношения позволяет перейти от пары a,b и пары b,c к паре a,c?",
+        "Как формулируется транзитивность бинарного отношения?",
+        "Какое условие должно выполняться при транзитивном отношении?"
+      ]
+    }
+  ],
+  "typos": 6440,
+  "typo_operations": {
+    "delete": 1631,
+    "transpose": 1611,
+    "layout": 1296,
+    "duplicate": 1587,
+    "keyboard": 1570
+  },
+  "splits": {
+    "train": 6081,
+    "validation": 882,
+    "test": 774
+  },
+  "files": {
+    "existing.jsonl": {
+      "rows": 1330,
+      "sha256": "6649452b9df65252386e1db70ed7f4fd0a88ddac934da524d0f84bb18ecfe980"
+    },
+    "generated.jsonl": {
+      "rows": 1000,
+      "sha256": "02f90da4c5501695b7a8d65526c9496f6277487f566635fb4c57ffd29a8de27b"
+    },
+    "typos.jsonl": {
+      "rows": 6440,
+      "sha256": "2bd14dfa8a8bffc541371cd5b5c25fec8a7a9b8c42f8373f008a7358e730f492"
+    },
+    "review.jsonl": {
+      "rows": 1033,
+      "sha256": "9c8016f1d52835fbb365e2bb5db5bf07d9f8a19947c450cf1ae6e9aa5f65c999"
+    },
+    "passages.jsonl": {
+      "rows": 2249,
+      "sha256": "cdbc0cf0f753aeb0a046f191e6ff3937e2012c156bb729171a00c77d9cd8cfcd"
+    },
+    "train-examples.jsonl": {
+      "rows": 6081,
+      "sha256": "3ef910e761cc9d66417ceb2a63c11d78cb2d30af411292722d72f6f912353944"
+    },
+    "validation-examples.jsonl": {
+      "rows": 882,
+      "sha256": "c43df41293c7daaba84ec8843df6fd04f518bb5b9502244eb4c609265b0de6ab"
+    },
+    "test-examples.jsonl": {
+      "rows": 774,
+      "sha256": "3f0444281f5eeb5336f9d9bd912cb6b60530a875fca9eb52c80d1df8c35abe73"
+    }
+  },
+  "limitations": [
+    "source labels are not independently verified",
+    "generated_weak requires review",
+    "review rows are not training positives",
+    "v0.2 holdout subjects preserved"
+  ]
+}
