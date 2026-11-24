@@ -51,8 +51,8 @@ class UniversityEncoder(nn.Module):
             nn.init.ones_(module.weight)
             nn.init.zeros_(module.bias)
 
-    def forward(self, input_ids, attention_mask):
-        """Return [batch, embedding_size] normalized vectors.
+    def hidden_states(self, input_ids, attention_mask):
+        """Return [batch, sequence, hidden_size] contextual states.
 
         Contract: right-padded rank-2 int64 IDs and matching binary mask,
         length <= max_length. Use collate_texts for validated text inputs.
@@ -66,7 +66,12 @@ class UniversityEncoder(nn.Module):
         x = x * valid
         for block in self.blocks:
             x = block(x, mask)
-        x = self.final_norm(x)
+        return self.final_norm(x)
+
+    def forward(self, input_ids, attention_mask):
+        x = self.hidden_states(input_ids, attention_mask)
+        mask = attention_mask.bool()
+        valid = mask.unsqueeze(-1).to(x.dtype)
         pooled = (x * valid).sum(dim=1) / valid.sum(dim=1).clamp_min(1)
         projected = self.projection(pooled)
         # Normalize in FP32 for numerical stability under mixed precision.

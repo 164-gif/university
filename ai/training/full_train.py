@@ -1,0 +1,167 @@
+"""50-epoch training with train-only MLM, E5 distillation and variant rotation."""
+import argparse
+import hashlib
+import json
+import math
+from pathlib import Path
+import random
+from time import perf_counter
+
+import torch
+
+from ai.indexing.chunker import digest
+from ai.model.config import EncoderConfig
+from ai.model.encoder import UniversityEncoder
+from ai.model.inputs import collate_texts
+from ai.model.checkpoint import save_checkpoint,load_checkpoint,tokenizer_sha256
+from ai.tokenizer.bpe import BPETokenizer
+from ai.training.train import read_dataset,TrainingCorpus
+from ai.training.losses import contrastive_loss,teacher_loss
+from ai.training.mlm import pretrain
+from ai.training.semantic_teacher import SemanticTeacher,semantic_loss,MODEL,REVISION
+from ai.training.retrieval_eval import evaluate,choose_alpha
+from ai.training.manual_eval import evaluate_manual
+
+def load_variants(directory,examples,tokenizer,max_length):
+    p=Path(directory)
+    m=json.loads((p/"augmentation-manifest.json").read_text())
+    raw=(p/"train-variants.jsonl").read_bytes().decode("utf-8")
+    if digest(raw)!=m["variant_sha256"] or hashlib.sha256((p/"dataset-manifest.json").read_bytes()).hexdigest()!=m["dataset_manifest_sha256"]:
+        raise ValueError("variant integrity mismatch")
+    variants={x["id"]:x["queries"] for x in map(json.loads,raw.splitlines())}
+    if set(variants)!={e["id"] for e in examples}:
+        raise ValueError("variant IDs mismatch")
+    if any(not qs or any(len(tokenizer.encode(q))>max_length for q in qs) for qs in variants.values()):
+        raise ValueError("invalid variants")
+    return variants,m
+
+def write_report(out,report):
+    p=out/"training-report.json"
+    tmp=p.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+    tmp.replace(p)
+
+def run(args):
+    if args.epochs<1 or args.mlm_epochs<0 or args.batch_size<2 or args.threads<1 or args.lr<=0:
+        raise ValueError("invalid training config")
+    torch.manual_seed(args.seed)
+    torch.set_num_threads(args.threads)
+    rng=random.Random(args.seed)
+    device=torch.device(args.device)
+    root=Path(args.directory)
+    tok_path=root/"tokenizer.json"
+    fit=json.loads((root/"tokenizer-report.json").read_text())
+    if fit["fit_scope"]!="train_subjects_only" or fit["tokenizer_sha256"]!=tokenizer_sha256(tok_path):
+        raise ValueError("expected train-only BPE")
+    tokenizer=BPETokenizer.load(tok_path)
+    data,manifest=read_dataset(root/"dataset",tok_path,tokenizer)
+    cfg=EncoderConfig(vocab_size=tokenizer.vocab_size,max_length=manifest["max_length"])
+    train_rows,train_examples=data["train"]
+    variants,aug=load_variants(root/"dataset",train_examples,tokenizer,cfg.max_length)
+    if set(r["subject"] for r in train_rows)&set(r["subject"] for s in ("validation","test") for r in data[s][0]):
+        raise ValueError("subject leakage")
+    model=UniversityEncoder(cfg).to(device)
+    out=root/"trained"
+    out.mkdir(parents=True,exist_ok=True)
+    start=perf_counter()
+    report={"status":"running","epochs_requested":args.epochs,"mlm_epochs_requested":args.mlm_epochs,
+            "seed":args.seed,"teacher":MODEL if not args.no_teacher else None,
+            "teacher_revision":REVISION if not args.no_teacher else None,
+            "config":cfg.to_dict(),"parameters":model.parameter_count(),
+            "tokenizer_sha256":tokenizer_sha256(tok_path),"dataset_sha256":aug["dataset_manifest_sha256"],
+            "variant_count":aug["variant_count"],"base_queries":len(train_examples),
+            "augmentation":aug["augmentation"],"history":[]}
+    write_report(out,report)
+    report["initial_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
+    report["mlm"]=pretrain(model,tokenizer,train_rows,epochs=args.mlm_epochs,batch_size=args.batch_size,
+                           device=device,seed=args.seed,lr=args.lr)
+    report["post_mlm_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
+    write_report(out,report)
+    teacher=None if args.no_teacher else SemanticTeacher(train_rows,train_examples,device)
+    corpus=TrainingCorpus(train_rows,train_examples,tokenizer)
+    optimizer=torch.optim.AdamW(model.parameters(),lr=args.lr,weight_decay=.01)
+    total=math.ceil(len(train_examples)/args.batch_size)*args.epochs
+    warmup=max(1,int(total*.05))
+    scheduler=torch.optim.lr_scheduler.LambdaLR(optimizer,lambda step:
+        (step+1)/warmup if step<warmup else max(.05,.5*(1+math.cos(math.pi*(step-warmup)/max(1,total-warmup)))))
+    # Shuffle each variant list once; every base query is visited once per
+    # epoch. Rotate rather than multiply the epoch size by ~17.
+    for qs in variants.values():
+        rng.shuffle(qs)
+    step=0
+    best=-1.
+    best_epoch=0
+    seen=set()
+    checkpoint=out/"encoder-best.pt"
+    for epoch in range(1,args.epochs+1):
+        model.train()
+        losses=[]
+        semantic=[]
+        for examples in corpus.batches(rng,args.batch_size,0):
+            ids,pos,w,ts,pairs=corpus.prepare(examples,rng,device)
+            query_texts=[variants[e["id"]][(epoch-1)%len(variants[e["id"]])] for e in examples]
+            q=collate_texts(tokenizer,query_texts,cfg,device=device)
+            d=collate_texts(tokenizer,[corpus.rows[k]["encoder_text"] for k in ids],cfg,device=device)
+            optimizer.zero_grad(set_to_none=True)
+            logits=(model(**q)@model(**d).T)/.07
+            if teacher:
+                scores=teacher.scores(examples,ids,device)
+                best_positive=scores.masked_fill(~pos,-torch.inf).max(1,keepdim=True).values
+                # Potential false negatives close to a known positive in
+                # teacher space are downweighted, not treated as truth.
+                w=torch.where((~pos)&(scores>=best_positive-.015),w*.1,w)
+                sem=semantic_loss(logits,scores,pos,w)
+            else:
+                sem=logits.sum()*0
+            loss=contrastive_loss(logits,pos,w)+.1*teacher_loss(logits,ts,pairs)+args.semantic_weight*sem
+            if not torch.isfinite(loss):
+                raise RuntimeError("nonfinite loss")
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(),1.,error_if_nonfinite=True)
+            optimizer.step()
+            scheduler.step()
+            step+=1
+            seen.update((e["id"],qtext) for e,qtext in zip(examples,query_texts))
+            losses.append(loss.item())
+            semantic.append(sem.item())
+        val=evaluate(model,tokenizer,*data["validation"],device=device)
+        record={"epoch":epoch,"steps":step,"loss":sum(losses)/len(losses),
+                "semantic_loss":sum(semantic)/len(semantic),"validation":val}
+        report["history"].append(record)
+        score=val["0.0"]["mrr_at5"]
+        if score>best:
+            best=score
+            best_epoch=epoch
+            save_checkpoint(checkpoint,model,tok_path,trained_steps=step)
+        report.update({"epochs_completed":epoch,"best_epoch":best_epoch,"total_steps":step,
+                       "distinct_query_variants_seen":len(seen),"elapsed_seconds":round(perf_counter()-start,2)})
+        write_report(out,report)
+        print("EPOCH="+json.dumps(record),flush=True)
+    model,best_steps=load_checkpoint(checkpoint,tok_path,map_location=device)
+    val=evaluate(model,tokenizer,*data["validation"],device=device)
+    alpha=choose_alpha(val)
+    report["validation"]=val
+    report["selected_lexical_weight"]=alpha
+    report["test"]=evaluate(model,tokenizer,*data["test"],device=device,alphas=tuple(sorted({0.,1.,alpha})))
+    cases=json.loads((Path(__file__).parents[1]/"evaluation"/"paraphrases_test.json").read_text(encoding="utf-8"))
+    report["manual_test"]=evaluate_manual(model,tokenizer,data["test"][0],cases,device=device,alpha=alpha)
+    report.update({"status":"completed","best_steps":best_steps,"checkpoint_bytes":checkpoint.stat().st_size,
+                   "checkpoint_sha256":hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
+                   "seconds":round(perf_counter()-start,2)})
+    write_report(out,report)
+    print("FINAL="+json.dumps({k:v for k,v in report.items() if k!="history"},ensure_ascii=False),flush=True)
+    return report
+
+if __name__=="__main__":
+    p=argparse.ArgumentParser()
+    p.add_argument("--directory",default="ai/generated/full")
+    p.add_argument("--epochs",type=int,default=50)
+    p.add_argument("--mlm-epochs",type=int,default=5)
+    p.add_argument("--batch-size",type=int,default=16)
+    p.add_argument("--threads",type=int,default=4)
+    p.add_argument("--seed",type=int,default=42)
+    p.add_argument("--lr",type=float,default=3e-4)
+    p.add_argument("--semantic-weight",type=float,default=.5)
+    p.add_argument("--device",default="cpu")
+    p.add_argument("--no-teacher",action="store_true",help="local debugging only")
+    run(p.parse_args())

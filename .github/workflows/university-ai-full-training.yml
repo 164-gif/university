@@ -1,0 +1,62 @@
+name: University AI full 50 epoch training
+
+on:
+  push:
+    branches: [feature/university-ai]
+    paths: ['.github/workflows/university-ai-full-training.yml']
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: Contrastive epochs
+        default: '50'
+        type: string
+      mlm_epochs:
+        description: MLM pretraining epochs
+        default: '5'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: university-ai-full-training
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      EPOCHS: ${{ github.event.inputs.epochs || '50' }}
+      MLM_EPOCHS: ${{ github.event.inputs.mlm_epochs || '5' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install CPU training dependencies
+        run: |
+          python -m pip install -r ai/model/requirements.txt --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r ai/training/requirements-full.txt
+      - name: Tests
+        run: python -m unittest discover -s ai/tests -v
+      - name: Index and train-only dataset
+        run: |
+          python -m ai.indexing.build_index
+          python -m ai.training.prepare_full
+      - name: MLM plus 50 contrastive epochs
+        run: python -m ai.training.full_train --epochs "$EPOCHS" --mlm-epochs "$MLM_EPOCHS" --threads 4
+      - name: Upload results (also on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: university-ai-full-training
+          path: |
+            ai/generated/full/tokenizer.json
+            ai/generated/full/tokenizer-report.json
+            ai/generated/full/dataset/
+            ai/generated/full/trained/
+          if-no-files-found: warn
+          retention-days: 30
