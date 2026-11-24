@@ -1,4 +1,4 @@
-name: University AI indexing, search and tokenizer tests
+name: University AI indexing, search, tokenizer and encoder tests
 
 on:
   push:
@@ -14,20 +14,26 @@ permissions:
 jobs:
   indexing:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ai/model/requirements.txt
+      - name: Install CPU PyTorch
+        run: python3 -m pip install -r ai/model/requirements.txt --index-url https://download.pytorch.org/whl/cpu
       - run: python3 -m unittest discover -s ai/tests -v
       - run: python3 -m ai.indexing.build_index
       - run: python3 -m ai.evaluation.evaluate
       - run: python3 -m ai.tokenizer.train
+      - run: python3 -m ai.model.smoke
       - uses: actions/upload-artifact@v4
         with:
-          name: university-tokenizer
+          name: university-tokenizer-and-encoder-report
           path: |
             ai/generated/tokenizer.json
             ai/generated/tokenizer-report.json
+            ai/generated/encoder-report.json
           if-no-files-found: error
