@@ -10,7 +10,7 @@ test("course, subject and duplicates",()=>{
 });
 test("source link",()=>{assert.equal(sourceHref("subjects/физика/a.md"),"./#/doc/"+encodeURIComponent("subjects/физика/a.md"));assert.throws(()=>sourceHref("subjects/../README.md"));});
 test("Python/JS BPE parity",()=>{
- const tok=new UniversityBPETokenizer(JSON.parse(readFileSync(new URL("../../ai/weights/v0.2/tokenizer.json",import.meta.url),"utf8")));
+ const tok=new UniversityBPETokenizer(JSON.parse(readFileSync(new URL("../../_site/ai-search-assets/tokenizer.json",import.meta.url),"utf8")));
  const fixtures=JSON.parse(readFileSync(new URL("../.ai-tokenizer-fixtures.json",import.meta.url),"utf8"));
  for(const sample of fixtures.samples)assert.deepEqual(tok.encode(sample.text),sample.ids,sample.text);
 });

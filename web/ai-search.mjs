@@ -26,10 +26,10 @@ function fillSubjects(){
 async function init(){
   status.textContent="Загрузка модели и индекса (первый запуск может занять время)…";
   const manifest=await(await fetchOk("manifest.json")).json();
-  if(manifest.format!=="university-browser-index-v1"||manifest.model_version!=="v0.2"||manifest.dimensions!==128||manifest.dtype!=="float32-little-endian"||!Number.isInteger(manifest.rows)||manifest.rows<1)throw new Error("Несовместимый индекс");
+  if(manifest.format!=="university-browser-index-v1"||manifest.model_version!=="v0.3"||manifest.dimensions!==256||manifest.dtype!=="float32-little-endian"||!Number.isInteger(manifest.rows)||manifest.rows<1)throw new Error("Несовместимый индекс");
   const [tok,passages,emb,model,ort]=await Promise.all([verified("tokenizer.json",manifest),verified("passages.json",manifest),verified("embeddings.f32",manifest),verified("encoder.onnx",manifest),import("./ai-search-assets/runtime/ort.wasm.min.mjs")]);
   const tokenizer=new UniversityBPETokenizer(decodeJson(tok)),rows=decodeJson(passages),vectors=new Float32Array(emb);
-  if(rows.length!==manifest.rows||vectors.length!==rows.length*128)throw new Error("Размеры индекса не совпадают");
+  if(rows.length!==manifest.rows||vectors.length!==rows.length*manifest.dimensions)throw new Error("Размеры индекса не совпадают");
   ort.env.wasm.wasmPaths=new URL("runtime/",root).href;ort.env.wasm.numThreads=1;
   status.textContent="Инициализация ONNX Runtime…";
   const session=await ort.InferenceSession.create(model,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
@@ -37,7 +37,7 @@ async function init(){
   const ids=[...new Set(rows.map(r=>r.cohort))].sort();
   fillOptions(cohort,ids.map(id=>[id,cohorts[id]||id]),cohort.value);fillSubjects();
   button.disabled=cohort.disabled=subject.disabled=mode.disabled=false;
-  status.textContent="Модель готова. В индексе "+rows.length+" фрагментов.";
+  status.textContent="Модель "+manifest.model_version+" готова. В индексе "+rows.length+" фрагментов.";
 }
 function fail(error){status.textContent="ИИ-поиск недоступен: "+error.message+". Обычный поиск продолжает работать.";}
 cohort.addEventListener("change",fillSubjects);
@@ -56,7 +56,7 @@ form.addEventListener("submit",async event=>{
         const {input_ids,attention_mask}=tokenizer.inputs(question,manifest.max_length);
         const tensor=ids=>new ort.Tensor("int64",BigInt64Array.from(ids,BigInt),[1,ids.length]);
         const output=await session.run({input_ids:tensor(input_ids),attention_mask:tensor(attention_mask)});
-        dense=rankPassages(output.embedding.data,rows,vectors,128,filters);
+        dense=rankPassages(output.embedding.data,rows,vectors,manifest.dimensions,filters);
       }catch(error){if(mode.value==="semantic"||!lex.length)throw error;neuralFailed=true;}
     }
     const hits=mode.value==="semantic"?dense.slice(0,5).map(h=>({...h,kind:"semantic-only"})):

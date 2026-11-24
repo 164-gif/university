@@ -1,6 +1,6 @@
 const BYTE_OFFSET = 4;
 const BASE_SIZE = BYTE_OFFSET + 256;
-const SEGMENTS = /\\[A-Za-z]+|[\p{L}\p{M}]+|\p{Nd}+|[ \t]+|\r\n|[^\p{L}\p{M}\p{Nd}_\s]+|[\s\S]/gu;
+const SEGMENTS = /\\[A-Za-z]+|[\p{L}\p{Nl}\p{No}]+|\p{Nd}+|[ \t]+|\r\n|[^\p{L}\p{N}_\p{White_Space}\u001c-\u001f]+|[\s\S]/gu;
 const encoder = new TextEncoder();
 
 export class UniversityBPETokenizer {

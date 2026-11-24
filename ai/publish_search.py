@@ -16,14 +16,16 @@ from ai.training.dataset import split_passage, encoder_text
 from ai.search.bm25 import DEFAULT_LAYERS
 
 ROOT=Path(__file__).resolve().parents[1]
-WEIGHTS=ROOT/"ai/weights/v0.2"
+WEIGHTS=ROOT/".ai-search-cache/model"
+MODEL_METADATA=ROOT/"ai/weights/v0.3/model.json"
+MODEL_VERSION="v0.3"
 SITE=ROOT/"_site"
 OUT=SITE/"ai-search-assets"
 CACHE=ROOT/".ai-search-cache/bundle"
 RUNTIME=("ort.wasm.min.mjs","ort-wasm-simd-threaded.mjs","ort-wasm-simd-threaded.wasm")
 FILES=("encoder.onnx","tokenizer.json","passages.json","embeddings.f32","vector-keys.json",
        *("runtime/"+n for n in RUNTIME))
-DIMENSIONS=128
+DIMENSIONS=256
 SCHEMA="university-ai-bundle-v3"
 
 def sha(path):
@@ -48,11 +50,11 @@ def hash_paths(paths):
 def fingerprints():
     # Same exact encoder input and tokenizer implementation + weights are
     # required to reuse vectors. Runtime/website changes only invalidate bundle.
-    vector=hash_paths([WEIGHTS/"encoder-v0.2.onnx",WEIGHTS/"tokenizer.json",ROOT/"ai/tokenizer/bpe.py",
+    vector=hash_paths([WEIGHTS/"encoder.onnx",WEIGHTS/"tokenizer.json",ROOT/"ai/tokenizer/bpe.py",
                        ROOT/"ai/browser-runtime/requirements.txt"])
     code=hash_paths([ROOT/p for p in (
         "ai/publish_search.py","ai/indexing/chunker.py","ai/training/dataset.py","ai/search/bm25.py",
-        "ai/search/lexical.py","ai/tokenizer/bpe.py","ai/weights/v0.2/encoder-v0.2.manifest.json",
+        "ai/search/lexical.py","ai/tokenizer/bpe.py","ai/weights/v0.3/model.json",
         "ai/browser-runtime/package.json","ai/browser-runtime/package-lock.json",
         "ai/browser-runtime/requirements.txt","ai/browser-runtime/smoke.mjs",
         "web/build_site.py","web/ai-search.html","web/ai-search.css","web/ai-search.mjs",
@@ -78,7 +80,7 @@ def emit(**values):
 def verify_bundle(directory, expected_vector=None):
     """Verify cached bundle independently of numpy/onnxruntime."""
     m=read_json(directory/"manifest.json")
-    if m.get("cache_schema")!=SCHEMA or m.get("model_version")!="v0.2" or m.get("dimensions")!=DIMENSIONS:
+    if m.get("cache_schema")!=SCHEMA or m.get("model_version")!=MODEL_VERSION or m.get("dimensions")!=DIMENSIONS:
         raise ValueError("unsupported cached bundle")
     if expected_vector is not None and m.get("vector_key")!=expected_vector:
         raise ValueError("different vector identity")
@@ -126,7 +128,7 @@ def load_vectors(finger):
     stride=DIMENSIONS*4
     for i,key in enumerate(keys):
         data=raw[i*stride:(i+1)*stride]
-        vector=struct.unpack("<128f",data)
+        vector=struct.unpack(f"<{DIMENSIONS}f",data)
         norm=math.sqrt(sum(x*x for x in vector))
         if not math.isfinite(norm) or abs(norm-1)>2e-4:
             raise ValueError("bad cached vector")
@@ -136,10 +138,11 @@ def load_vectors(finger):
 def main():
     start=time.perf_counter()
     finger=fingerprints()
-    model=WEIGHTS/"encoder-v0.2.onnx"
+    model=WEIGHTS/"encoder.onnx"
     tokpath=WEIGHTS/"tokenizer.json"
-    meta=read_json(WEIGHTS/"encoder-v0.2.manifest.json")
-    if (sha(model)!=meta["onnx_sha256"] or sha(tokpath)!=meta["tokenizer_sha256"]
+    meta=read_json(MODEL_METADATA)
+    if (meta["model_version"]!=MODEL_VERSION or meta["dimensions"]!=DIMENSIONS
+            or sha(model)!=meta["onnx_sha256"] or sha(tokpath)!=meta["tokenizer_sha256"]
             or model.stat().st_size!=meta["onnx_bytes"] or meta["trained_steps"]<=0):
         raise ValueError("ONNX/tokenizer integrity mismatch")
     tokenizer=BPETokenizer.load(tokpath)
@@ -225,7 +228,7 @@ def main():
     dist=ROOT/"ai/browser-runtime/node_modules/onnxruntime-web/dist"
     for name in RUNTIME:
         shutil.copy2(dist/name,runtime/name)
-    manifest={"format":"university-browser-index-v1","model_version":"v0.2",
+    manifest={"format":"university-browser-index-v1","model_version":MODEL_VERSION,
               "trained_steps":meta["trained_steps"],"rows":len(rows),"dimensions":DIMENSIONS,
               "dtype":"float32-little-endian","max_length":512,"cache_schema":SCHEMA,
               **{k:finger[k] for k in ("vector_key","code_key","corpus_key")},

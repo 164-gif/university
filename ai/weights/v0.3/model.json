@@ -1,0 +1,8 @@
+{
+  "model_version": "v0.3",
+  "dimensions": 256,
+  "trained_steps": 2268,
+  "onnx_bytes": 9375704,
+  "onnx_sha256": "0d90d93ab1e8f9ab3e48b9247b3b55dc15246ce96baaa9a19fd15fc292eb09b9",
+  "tokenizer_sha256": "90e623b5ab4b1ee8618a5a55bb6a3105d90a65aaadccd211ee012f3006abbc1a"
+}

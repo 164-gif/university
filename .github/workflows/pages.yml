@@ -61,8 +61,24 @@ jobs:
           print('Math source, Git dates and versioned frontend: OK')
           PY
 
+      - name: Download the v0.3 model
+        id: ai_model
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V03_BUNDLE_SHA256: 156e2737cda4bff85d82e6a2b61b451c24c42a4ca82e6b600758784d763bea80
+        run: |
+          set -euo pipefail
+          bundle="$RUNNER_TEMP/university-ai-v03-browser.zip"
+          gh release download university-ai-v0.3 --repo "$GITHUB_REPOSITORY" \
+            --pattern university-ai-v03-browser.zip --output "$bundle"
+          printf '%s  %s\n' "$V03_BUNDLE_SHA256" "$bundle" | sha256sum --check
+          mkdir -p .ai-search-cache/model
+          unzip -jo "$bundle" encoder.onnx tokenizer.json -d .ai-search-cache/model
+
       - name: AI cache fingerprints
         id: ai_plan
+        if: steps.ai_model.outcome == 'success'
         continue-on-error: true
         run: python3 -m ai.publish_search plan
 
@@ -147,20 +163,12 @@ jobs:
             echo "AI beta bundle is ready."
           else
             rm -rf _site/ai-search-assets
+            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "::error::The new AI model failed validation. Keeping the current Pages deployment."
+              exit 1
+            fi
             echo "::warning::AI beta unavailable for this build; publishing regular website without unverified or stale AI assets."
           fi
-
-      - name: Include University AI v0.3
-        env:
-          GH_TOKEN: ${{ github.token }}
-          V03_BUNDLE_SHA256: 156e2737cda4bff85d82e6a2b61b451c24c42a4ca82e6b600758784d763bea80
-        run: |
-          set -euo pipefail
-          bundle="$RUNNER_TEMP/university-ai-v03-browser.zip"
-          gh release download university-ai-v0.3 --repo "$GITHUB_REPOSITORY" \
-            --pattern university-ai-v03-browser.zip --output "$bundle"
-          printf '%s  %s\n' "$V03_BUNDLE_SHA256" "$bundle" | sha256sum --check
-          python3 -m zipfile -e "$bundle" _site/ai-v03
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
