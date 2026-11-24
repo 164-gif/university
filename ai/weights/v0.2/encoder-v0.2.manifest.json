@@ -1,0 +1,17 @@
+{
+  "format": "onnx",
+  "opset": 18,
+  "checkpoint": "encoder-best.pt",
+  "checkpoint_sha256": "c59b13805ca8e366a2df1e4e0b9aa41706be137fecb3357947042b2b2176a657",
+  "tokenizer": "tokenizer.json",
+  "tokenizer_sha256": "eed447e3b81565eebe85921b37f5e81e952ac6052656af19e559038aa5f1523c",
+  "trained_steps": 2548,
+  "parameters": 2840704,
+  "onnx_bytes": 11419331,
+  "onnx_sha256": "7710a1be3abbd97dedf121f6e0c8c088ddbb590199ff033ec22c15a9f3214e51",
+  "validation": {
+    "runtime": "onnxruntime-cpu",
+    "max_abs_error": 8.940696716308594e-08,
+    "dynamic_batch_and_sequence": true
+  }
+}
