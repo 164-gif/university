@@ -5,6 +5,7 @@ import json
 import math
 from pathlib import Path
 import random
+import contextlib
 from time import perf_counter
 
 import torch
@@ -42,12 +43,19 @@ def write_report(out,report):
     tmp.replace(p)
 
 def run(args):
-    if args.epochs<1 or args.mlm_epochs<0 or args.batch_size<2 or args.threads<1 or args.lr<=0:
+    if args.epochs<1 or args.mlm_epochs<0 or args.batch_size<2 or args.threads<1 or args.lr<=0 or args.grad_accum<1:
         raise ValueError("invalid training config")
     torch.manual_seed(args.seed)
     torch.set_num_threads(args.threads)
     rng=random.Random(args.seed)
     device=torch.device(args.device)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA requested but unavailable; refusing silent CPU fallback")
+    amp_dtype = (torch.bfloat16 if args.precision == "bf16" else
+                 torch.float16 if args.precision == "fp16" else None)
+    if amp_dtype == torch.bfloat16 and device.type == "cuda" and not torch.cuda.is_bf16_supported():
+        raise RuntimeError("BF16 requested but this CUDA device does not support it")
+    scaler = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda" and args.precision == "fp16"))
     root=Path(args.directory)
     tok_path=root/"tokenizer.json"
     fit=json.loads((root/"tokenizer-report.json").read_text())
@@ -75,12 +83,21 @@ def run(args):
     report["initial_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
     report["mlm"]=pretrain(model,tokenizer,train_rows,epochs=args.mlm_epochs,batch_size=args.batch_size,
                            device=device,seed=args.seed,lr=args.lr)
+    if report["mlm"]:
+        mlm_steps=sum(row["steps"] for row in report["mlm"])
+        save_checkpoint(out/"encoder-mlm.pt",model,tok_path,trained_steps=mlm_steps,
+                        epoch=args.mlm_epochs,dataset_sha256=aug["dataset_manifest_sha256"],
+                        config={"phase":"mlm","epochs":args.mlm_epochs,"masking_probability":.15})
     report["post_mlm_validation"]=evaluate(model,tokenizer,*data["validation"],device=device,alphas=(0,1))
     write_report(out,report)
     teacher=None if args.no_teacher else SemanticTeacher(train_rows,train_examples,device)
     corpus=TrainingCorpus(train_rows,train_examples,tokenizer)
-    optimizer=torch.optim.AdamW(model.parameters(),lr=args.lr,weight_decay=.01)
-    total=math.ceil(len(train_examples)/args.batch_size)*args.epochs
+    try:
+        optimizer=torch.optim.AdamW(model.parameters(),lr=args.lr,weight_decay=.01,
+                                    fused=(device.type == "cuda"))
+    except (TypeError, RuntimeError):
+        optimizer=torch.optim.AdamW(model.parameters(),lr=args.lr,weight_decay=.01)
+    total=math.ceil(math.ceil(len(train_examples)/args.batch_size)/args.grad_accum)*args.epochs
     warmup=max(1,int(total*.05))
     scheduler=torch.optim.lr_scheduler.LambdaLR(optimizer,lambda step:
         (step+1)/warmup if step<warmup else max(.05,.5*(1+math.cos(math.pi*(step-warmup)/max(1,total-warmup)))))
@@ -93,7 +110,30 @@ def run(args):
     best_epoch=0
     seen=set()
     checkpoint=out/"encoder-best.pt"
-    for epoch in range(1,args.epochs+1):
+    last_checkpoint=out/"encoder-last.pt"
+    first_epoch=1
+    if args.resume:
+        state=torch.load(last_checkpoint,map_location="cpu",weights_only=False)
+        if state.get("tokenizer_sha256")!=tokenizer_sha256(tok_path) or state.get("dataset_sha256")!=aug["dataset_manifest_sha256"]:
+            raise ValueError("resume checkpoint tokenizer/dataset hash mismatch")
+        model.load_state_dict(state["state_dict"])
+        optimizer.load_state_dict(state["optimizer"]); scheduler.load_state_dict(state["scheduler"])
+        if state.get("scaler"): scaler.load_state_dict(state["scaler"])
+        step=state["trained_steps"]; first_epoch=state["epoch"]+1
+        best=state.get("best_metrics",{}).get("mrr_at5",-1.); best_epoch=state.get("best_metrics",{}).get("epoch",0)
+        torch.set_rng_state(state["rng"]["torch"])
+        if device.type=="cuda" and state["rng"].get("cuda"): torch.cuda.set_rng_state_all(state["rng"]["cuda"])
+        if state["rng"].get("python"): rng.setstate(state["rng"]["python"])
+        report.update(state.get("report",{}))
+    if args.compile:
+        try:
+            candidate=torch.compile(model)
+            # Compilation may fail lazily at first invocation; retain the
+            # eager model as the authoritative parameter/checkpoint owner.
+            model=candidate
+        except Exception as exc:
+            print(f"torch.compile unavailable: {type(exc).__name__}: {exc}",flush=True)
+    for epoch in range(first_epoch,args.epochs+1):
         model.train()
         losses=[]
         semantic=[]
@@ -102,8 +142,10 @@ def run(args):
             query_texts=[variants[e["id"]][(epoch-1)%len(variants[e["id"]])] for e in examples]
             q=collate_texts(tokenizer,query_texts,cfg,device=device)
             d=collate_texts(tokenizer,[corpus.rows[k]["encoder_text"] for k in ids],cfg,device=device)
-            optimizer.zero_grad(set_to_none=True)
-            logits=(model(**q)@model(**d).T)/.07
+            if (len(losses) % args.grad_accum)==0: optimizer.zero_grad(set_to_none=True)
+            autocast=(torch.autocast(device_type="cuda",dtype=amp_dtype) if amp_dtype and device.type=="cuda" else contextlib.nullcontext())
+            with autocast:
+                logits=(model(**q)@model(**d).T)/.07
             if teacher:
                 scores=teacher.scores(examples,ids,device)
                 best_positive=scores.masked_fill(~pos,-torch.inf).max(1,keepdim=True).values
@@ -114,17 +156,22 @@ def run(args):
             else:
                 sem=logits.sum()*0
             loss=contrastive_loss(logits,pos,w)+.1*teacher_loss(logits,ts,pairs)+args.semantic_weight*sem
+            loss=loss/args.grad_accum
             if not torch.isfinite(loss):
                 raise RuntimeError("nonfinite loss")
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(),1.,error_if_nonfinite=True)
-            optimizer.step()
-            scheduler.step()
+            scaler.scale(loss).backward()
+            if (len(losses)+1)%args.grad_accum==0:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(),1.,error_if_nonfinite=True)
+                scaler.step(optimizer); scaler.update(); scheduler.step()
             step+=1
             seen.update((e["id"],qtext) for e,qtext in zip(examples,query_texts))
             losses.append(loss.item())
             semantic.append(sem.item())
         val=evaluate(model,tokenizer,*data["validation"],device=device)
+        if len(losses)%args.grad_accum:
+            scaler.unscale_(optimizer); torch.nn.utils.clip_grad_norm_(model.parameters(),1.,error_if_nonfinite=True)
+            scaler.step(optimizer); scaler.update(); scheduler.step()
         record={"epoch":epoch,"steps":step,"loss":sum(losses)/len(losses),
                 "semantic_loss":sum(semantic)/len(semantic),"validation":val}
         report["history"].append(record)
@@ -132,10 +179,16 @@ def run(args):
         if score>best:
             best=score
             best_epoch=epoch
-            save_checkpoint(checkpoint,model,tok_path,trained_steps=step)
+            save_checkpoint(checkpoint,model._orig_mod if hasattr(model,"_orig_mod") else model,
+                            tok_path,trained_steps=step,epoch=epoch,
+                            best_metrics={"mrr_at5":best,"epoch":best_epoch},
+                            dataset_sha256=aug["dataset_manifest_sha256"])
         report.update({"epochs_completed":epoch,"best_epoch":best_epoch,"total_steps":step,
                        "distinct_query_variants_seen":len(seen),"elapsed_seconds":round(perf_counter()-start,2)})
         write_report(out,report)
+        save_checkpoint(last_checkpoint,model._orig_mod if hasattr(model,"_orig_mod") else model,tok_path,trained_steps=step,optimizer=optimizer,scheduler=scheduler,
+                        scaler=scaler,epoch=epoch,best_metrics={"mrr_at5":best,"epoch":best_epoch},
+                        dataset_sha256=aug["dataset_manifest_sha256"],python_rng=rng)
         print("EPOCH="+json.dumps(record),flush=True)
     model,best_steps=load_checkpoint(checkpoint,tok_path,map_location=device)
     val=evaluate(model,tokenizer,*data["validation"],device=device)
@@ -162,6 +215,10 @@ if __name__=="__main__":
     p.add_argument("--seed",type=int,default=42)
     p.add_argument("--lr",type=float,default=3e-4)
     p.add_argument("--semantic-weight",type=float,default=.5)
-    p.add_argument("--device",default="cpu")
+    p.add_argument("--device",default="cuda")
+    p.add_argument("--precision",choices=("bf16","fp16","fp32"),default="bf16")
+    p.add_argument("--grad-accum",type=int,default=1)
+    p.add_argument("--resume",action="store_true")
+    p.add_argument("--compile",action="store_true")
     p.add_argument("--no-teacher",action="store_true",help="local debugging only")
     run(p.parse_args())

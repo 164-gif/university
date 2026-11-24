@@ -65,6 +65,21 @@ class EncoderTests(unittest.TestCase):
         self.assertTrue(torch.isfinite(out).all())
         self.assertEqual(out.abs().sum().item(),0)
 
+    def test_sdpa_matches_explicit_attention_math(self):
+        attention=self.model.blocks[0].attention.eval()
+        x=torch.randn(2,7,self.config.hidden_size)
+        mask=torch.tensor([[1,1,1,1,0,0,0],[1,1,1,0,0,0,0]])
+        batch,length,hidden=x.shape
+        q,k,v=attention.qkv(x).reshape(batch,length,3,attention.heads,
+                attention.head_dim).permute(2,0,3,1,4).unbind(0)
+        logits=(q@k.transpose(-2,-1))*(attention.head_dim**-.5)
+        keep=mask[:,None,None,:].bool()
+        weights=torch.softmax(logits.masked_fill(~keep,-1e4),dim=-1)*keep
+        expected=(weights@v).transpose(1,2).reshape(batch,length,hidden)
+        expected=attention.output(expected)*mask.unsqueeze(-1)
+        actual=attention(x,mask)
+        self.assertTrue(torch.allclose(actual,expected,atol=1e-6,rtol=1e-5))
+
     def test_input_errors(self):
         with self.assertRaises(ValueError):
             collate_texts(self.tokenizer,["x"*1000],self.config)
