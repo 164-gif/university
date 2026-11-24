@@ -11,6 +11,7 @@ from itertools import chain
 from ai.question_bank.build import ROOT,example,topic,clean,REVIEW,DEFINITION,question_pool,scope
 from ai.question_bank.typos import augment,load,write,norm,ident
 from ai.tokenizer.bpe import BPETokenizer
+from ai.search.lexical import tokens
 
 BASE_COUNT=1000
 TARGET=3000
