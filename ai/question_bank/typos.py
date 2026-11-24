@@ -65,11 +65,11 @@ def corrupt(text,kind,rng):
         return text,[]
     return text[:m.start()]+changed+text[m.end():],[{"type":kind,"before":m[0],"after":changed}]
 
-def augment(rows,variants=5,seed=42):
+def augment(rows,variants=5,seed=42,*,reserved=()):
     if variants<0 or variants>30:
         raise ValueError("variants must be 0..30")
     original={norm(r["query"]) for r in rows}
-    seen=set(original)
+    seen=set(original)|{norm(q) for q in reserved}
     output=[]
     for row in sorted(rows,key=lambda r:r["id"]):
         if not row.get("positive_ids") or row.get("label")=="review":

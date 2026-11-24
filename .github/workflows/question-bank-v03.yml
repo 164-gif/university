@@ -21,12 +21,12 @@ jobs:
           python-version: '3.12'
       - name: Validate augmentation
         run: python -m unittest ai.question_bank.test_bank -v
-      - name: Generate dataset
-        run: python -m ai.question_bank.build --count 1000 --variants 5 --seed 42
+      - name: Extend dataset to 3000 generated questions
+        run: python -m ai.question_bank.extend --target 3000 --variants 5 --seed 20261124
       - name: Upload question bank
         uses: actions/upload-artifact@v4
         with:
-          name: university-ai-v03-question-bank
+          name: university-ai-v03-question-bank-extended
           path: ai/data/v03/
           retention-days: 90
       - name: Commit generated bank on experimental branch
@@ -35,5 +35,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f ai/data/v03
           git diff --cached --quiet && exit 0
-          git commit -m "data(ai): generated v0.3 question bank and typo augmentation"
+          git commit -m "data(ai): append 2000 unique generated questions with typo augmentation"
           git push origin HEAD:refs/heads/feature/university-ai-v03-dataset
