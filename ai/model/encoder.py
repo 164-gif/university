@@ -66,7 +66,7 @@ class UniversityEncoder(nn.Module):
         x = x * valid
         for block in self.blocks:
             x = block(x, mask)
-        return self.final_norm(x)
+        return self.final_norm(x) * valid
 
     def forward(self, input_ids, attention_mask):
         x = self.hidden_states(input_ids, attention_mask)

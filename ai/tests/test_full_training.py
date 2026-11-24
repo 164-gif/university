@@ -31,3 +31,25 @@ class FullTrainingTests(unittest.TestCase):
         loss.backward()
         self.assertTrue(torch.isfinite(loss))
         self.assertEqual(s.grad[0,2].item(),0.)
+
+    def test_strict_preparation(self):
+        from pathlib import Path
+        import tempfile
+        import json
+        from ai.indexing.build_index import build
+        from ai.training.prepare_full import prepare
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            for subject,term in (("physics","Скорость"),("mathematical_analysis","Множество"),("russian_statehood_fundamentals","Власть")):
+                p=root/"subjects"/subject/"notes"/"01.md"
+                p.parent.mkdir(parents=True)
+                p.write_text(f"# {term}\n\n{term} — определяемое понятие учебного материала.\n",encoding="utf-8")
+            source=root/"index"
+            output=root/"strict"
+            build(root,source)
+            report=prepare(source,output,300)
+            fit=json.loads((output/"tokenizer-report.json").read_text())
+            self.assertEqual(fit["fit_passages"],1)
+            self.assertEqual(fit["fit_scope"],"train_subjects_only")
+            self.assertGreater(report["variant_count"],report["base_queries"])
+            self.assertFalse((source/"tokenizer.json").exists())

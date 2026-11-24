@@ -13,7 +13,7 @@ from ai.training.dataset import HOLDOUT, normalize, question_key
 from ai.training.build_dataset import run as build_dataset
 
 # Preserve the entire original query, including negation, numbers and math.
-# These are register/style augmentations, not independent paraphrases.
+# These are controlled intent/register augmentations, not independent paraphrases.
 PREFIXES = ("Подскажите: ", "Объясните, пожалуйста: ", "Нужно разобраться: ",
             "Ответьте по конспекту: ", "Вопрос к зачёту: ", "Хочу понять: ",
             "Напомните: ", "Помогите разобраться: ", "Найдите в лекции: ",
@@ -25,7 +25,22 @@ PREFIXES = ("Подскажите: ", "Объясните, пожалуйста:
 def variants(query):
     q=query.strip()
     yield q
-    for prefix in PREFIXES:
+    alternatives=[]
+    for start in ("Что такое ", "Дайте определение: "):
+        if q.startswith(start):
+            term=q[len(start):].rstrip("?").strip()
+            if term and len(term)<180:
+                alternatives.extend(("Как определяется "+term+"?",
+                                     "Что означает термин: "+term+"?",
+                                     "Как в лекции объясняется понятие: "+term+"?"))
+            break
+    if q.startswith("Объясните: "):
+        topic=q[len("Объясните: "):].strip()
+        if topic:
+            alternatives.extend(("Как в лекции раскрывается тема: "+topic+"?",
+                                 "Что нужно знать о теме: "+topic+"?"))
+    yield from alternatives
+    for prefix in PREFIXES[:len(PREFIXES)-len(alternatives)]:
         yield prefix+q
     # Only change terminal punctuation, never mathematical content.
     if q.endswith("?"):
@@ -73,6 +88,8 @@ def prepare(source, output, vocab_size=16384):
     holdout=set()
     for s in ("validation","test"):
         holdout.update(question_key(json.loads(x)["query"]) for x in (dataset/f"{s}-examples.jsonl").read_text(encoding="utf-8").splitlines())
+    manual=Path(__file__).parents[1]/"evaluation"/"paraphrases_test.json"
+    holdout.update(question_key(c["q"]) for c in json.loads(manual.read_text(encoding="utf-8")))
     # A variant may belong to several base queries: do not attach conflicting
     # labels to the same normalized query in the same subject and cohort.
     owners=defaultdict(list)
@@ -96,7 +113,7 @@ def prepare(source, output, vocab_size=16384):
     (dataset/"train-variants.jsonl").write_bytes(body.encode("utf-8"))
     ar={"variant_count":sum(len(x["queries"]) for x in data),"base_queries":len(data),
         "variant_sha256":digest(body),"dataset_manifest_sha256":hashlib.sha256((dataset/"dataset-manifest.json").read_bytes()).hexdigest(),
-        "augmentation":"style_prefixes_only","tokenizer_fit_scope":"train_subjects_only"}
+        "augmentation":"controlled_intent_and_style_templates","tokenizer_fit_scope":"train_subjects_only"}
     (dataset/"augmentation-manifest.json").write_text(json.dumps(ar,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     print("PREPARE="+json.dumps({**report,**ar,"splits":dm["splits"]},ensure_ascii=False),flush=True)
     return ar
