@@ -61,22 +61,94 @@ jobs:
           print('Math source, Git dates and versioned frontend: OK')
           PY
 
-      - name: Install experimental AI runtime
+      - name: AI cache fingerprints
+        id: ai_plan
+        continue-on-error: true
+        run: python3 -m ai.publish_search plan
+
+      - name: Restore verified AI bundle cache
+        id: ai_cache
+        if: steps.ai_plan.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: .ai-search-cache/bundle
+          key: ai-bundle-v3-${{ runner.os }}-${{ steps.ai_plan.outputs.vector_key }}-${{ steps.ai_plan.outputs.code_key }}-${{ steps.ai_plan.outputs.corpus_key }}
+          restore-keys: |
+            ai-bundle-v3-${{ runner.os }}-${{ steps.ai_plan.outputs.vector_key }}-${{ steps.ai_plan.outputs.code_key }}-
+            ai-bundle-v3-${{ runner.os }}-${{ steps.ai_plan.outputs.vector_key }}-
+
+      - name: Validate and reuse AI bundle
+        id: ai_restore
+        if: steps.ai_plan.outcome == 'success'
+        continue-on-error: true
+        run: python3 -m ai.publish_search restore
+
+      - name: Set up compatible Python for AI
+        id: ai_python
+        if: steps.ai_plan.outcome == 'success' && steps.ai_restore.outputs.ready != 'true'
+        continue-on-error: true
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ai/browser-runtime/requirements.txt
+
+      - name: Set up Node and npm cache
+        id: ai_node
+        if: steps.ai_plan.outcome == 'success' && steps.ai_restore.outputs.ready != 'true'
+        continue-on-error: true
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ai/browser-runtime/package-lock.json
+
+      - name: Build and validate optional AI index
+        id: ai_build
+        if: steps.ai_plan.outcome == 'success' && steps.ai_restore.outputs.ready != 'true' && steps.ai_python.outcome == 'success' && steps.ai_node.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 6
+        env:
+          AI_SMOKE_REQUIRED: ${{ steps.ai_restore.outputs.smoke_required }}
         run: |
-          npm ci --prefix ai/browser-runtime
-          python3 -m pip install numpy==2.2.6 onnxruntime==1.23.2
-      - name: Build AI search index
-        run: python3 -m ai.publish_search
-      - name: AI ranking and tokenizer tests
-        run: node --test web/tests/ai-search.test.mjs
-      - name: Chromium inference smoke test
+          set -euo pipefail
+          npm ci --prefix ai/browser-runtime --no-audit --no-fund
+          python -m pip install --only-binary=:all: --disable-pip-version-check --retries 2 -r ai/browser-runtime/requirements.txt
+          python -m ai.publish_search build
+          node --test web/tests/ai-search.test.mjs
+          if [ "$AI_SMOKE_REQUIRED" != "false" ]; then
+            npm install --prefix ai/browser-runtime --no-save --package-lock=false --no-audit --no-fund playwright-core@1.51.1
+            python -m http.server 8123 --bind 127.0.0.1 --directory _site &
+            server=$!
+            trap 'kill "$server" 2>/dev/null || true' EXIT
+            for i in {1..20}; do curl -fsS http://127.0.0.1:8123/ai-search.html >/dev/null && break; sleep 1; done
+            node ai/browser-runtime/smoke.mjs
+          else
+            echo "AI implementation unchanged; browser smoke test reused from verified cache."
+          fi
+          python -m ai.publish_search save-cache
+
+      - name: Save successful AI bundle
+        if: steps.ai_build.outcome == 'success' && steps.ai_cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .ai-search-cache/bundle
+          key: ${{ steps.ai_cache.outputs.cache-primary-key }}
+
+      - name: Isolate optional AI failures
+        if: always()
+        env:
+          AI_READY: ${{ steps.ai_restore.outputs.ready }}
+          AI_BUILD_OUTCOME: ${{ steps.ai_build.outcome }}
         run: |
-          npm install --prefix ai/browser-runtime --no-save --package-lock=false playwright-core@1.51.1
-          python3 -m http.server 8123 --bind 127.0.0.1 --directory _site &
-          server=$!
-          trap 'kill "$server"' EXIT
-          for i in {1..20}; do curl -fsS http://127.0.0.1:8123/ai-search.html >/dev/null && break; sleep 1; done
-          node ai/browser-runtime/smoke.mjs
+          if [ "$AI_READY" = "true" ] || [ "$AI_BUILD_OUTCOME" = "success" ]; then
+            echo "AI beta bundle is ready."
+          else
+            rm -rf _site/ai-search-assets
+            echo "::warning::AI beta unavailable for this build; publishing regular website without unverified or stale AI assets."
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

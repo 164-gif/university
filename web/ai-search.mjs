@@ -7,11 +7,11 @@ const form=$("ai-form"),button=$("ai-submit"),status=$("ai-status"),results=$("a
 const names={analytical_geometry:"Аналитическая геометрия",mathematical_analysis:"Математический анализ",physics:"Физика",laboratory_physics:"Лабораторные работы по физике",obzh:"ОБЖ",introduction_to_information_security:"Введение в информационную безопасность",russian_statehood_fundamentals:"Основы российской государственности",english:"Английский язык",informatics:"Информатика"};
 const cohorts={"ib-2026-1kurs":"ИБ-2026 — 1 курс","ib-2025-1kurs":"ИБ-2025 — 1 курс","ib-2026-2kurs":"ИБ-2026 — 2 курс"};
 let loaded;
-async function fetchOk(name){const r=await fetch(new URL(name,root));if(!r.ok)throw new Error("Не удалось загрузить "+name+" ("+r.status+")");return r;}
+async function fetchOk(name,hash){const url=new URL(name,root);if(hash)url.searchParams.set("v",hash);const r=await fetch(url,{cache:hash?"default":"no-cache"});if(!r.ok)throw new Error("Не удалось загрузить "+name+" ("+r.status+")");return r;}
 async function verified(name,manifest){
   const entry=manifest.files[name];
   if(!entry||! /^[a-f0-9]{64}$/.test(entry.sha256))throw new Error("Нет контрольной суммы "+name);
-  const bytes=await(await fetchOk(name)).arrayBuffer();
+  const bytes=await(await fetchOk(name,entry.sha256)).arrayBuffer();
   if(bytes.byteLength!==entry.bytes)throw new Error("Неверный размер "+name);
   const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("");
   if(hash!==entry.sha256)throw new Error("Неверная контрольная сумма "+name);
