@@ -166,12 +166,12 @@ def run(args):
                 scaler.step(optimizer); scaler.update(); scheduler.step()
             step+=1
             seen.update((e["id"],qtext) for e,qtext in zip(examples,query_texts))
-            losses.append(loss.item())
+            losses.append(loss.item()*args.grad_accum)
             semantic.append(sem.item())
-        val=evaluate(model,tokenizer,*data["validation"],device=device)
         if len(losses)%args.grad_accum:
             scaler.unscale_(optimizer); torch.nn.utils.clip_grad_norm_(model.parameters(),1.,error_if_nonfinite=True)
             scaler.step(optimizer); scaler.update(); scheduler.step()
+        val=evaluate(model,tokenizer,*data["validation"],device=device)
         record={"epoch":epoch,"steps":step,"loss":sum(losses)/len(losses),
                 "semantic_loss":sum(semantic)/len(semantic),"validation":val}
         report["history"].append(record)
