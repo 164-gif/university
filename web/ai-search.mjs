@@ -1,9 +1,9 @@
 import {UniversityBPETokenizer} from "./ai-search-tokenizer.mjs";
-import {rankPassages,sourceHref} from "./ai-search-core.mjs";
+import {rankPassages,sourceHref,LexicalIndex,hybridRank} from "./ai-search-core.mjs";
 try{document.documentElement.dataset.theme=localStorage.getItem("university-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");}catch{}
 const root=new URL("./ai-search-assets/",import.meta.url);
 const $=id=>document.getElementById(id);
-const form=$("ai-form"),button=$("ai-submit"),status=$("ai-status"),results=$("ai-results"),cohort=$("ai-cohort"),subject=$("ai-subject");
+const form=$("ai-form"),button=$("ai-submit"),status=$("ai-status"),results=$("ai-results"),cohort=$("ai-cohort"),subject=$("ai-subject"),mode=$("ai-mode");
 const names={analytical_geometry:"Аналитическая геометрия",mathematical_analysis:"Математический анализ",physics:"Физика",laboratory_physics:"Лабораторные работы по физике",obzh:"ОБЖ",introduction_to_information_security:"Введение в информационную безопасность",russian_statehood_fundamentals:"Основы российской государственности",english:"Английский язык",informatics:"Информатика"};
 const cohorts={"ib-2026-1kurs":"ИБ-2026 — 1 курс","ib-2025-1kurs":"ИБ-2025 — 1 курс","ib-2026-2kurs":"ИБ-2026 — 2 курс"};
 let loaded;
@@ -33,10 +33,10 @@ async function init(){
   ort.env.wasm.wasmPaths=new URL("runtime/",root).href;ort.env.wasm.numThreads=1;
   status.textContent="Инициализация ONNX Runtime…";
   const session=await ort.InferenceSession.create(model,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
-  loaded={manifest,tokenizer,rows,vectors,ort,session};
+  loaded={manifest,tokenizer,rows,vectors,ort,session,lexical:new LexicalIndex(rows)};
   const ids=[...new Set(rows.map(r=>r.cohort))].sort();
   fillOptions(cohort,ids.map(id=>[id,cohorts[id]||id]),cohort.value);fillSubjects();
-  button.disabled=cohort.disabled=subject.disabled=false;
+  button.disabled=cohort.disabled=subject.disabled=mode.disabled=false;
   status.textContent="Модель готова. В индексе "+rows.length+" фрагментов.";
 }
 function fail(error){status.textContent="ИИ-поиск недоступен: "+error.message+". Обычный поиск продолжает работать.";}
@@ -44,25 +44,35 @@ cohort.addEventListener("change",fillSubjects);
 form.addEventListener("submit",async event=>{
   event.preventDefault();const question=$("ai-query").value.trim();
   if(!question||!loaded||button.disabled)return;
-  button.disabled=cohort.disabled=subject.disabled=true;results.replaceChildren();
+  button.disabled=cohort.disabled=subject.disabled=mode.disabled=true;results.replaceChildren();
   try{
-    const {manifest,tokenizer,rows,vectors,ort,session}=loaded;
+    const {manifest,tokenizer,rows,vectors,ort,session,lexical}=loaded;
     status.textContent="Ищу подходящие фрагменты…";const t=performance.now();
-    const {input_ids,attention_mask}=tokenizer.inputs(question,manifest.max_length);
-    const tensor=ids=>new ort.Tensor("int64",BigInt64Array.from(ids,BigInt),[1,ids.length]);
-    const output=await session.run({input_ids:tensor(input_ids),attention_mask:tensor(attention_mask)});
-    const hits=rankPassages(output.embedding.data,rows,vectors,128,{cohort:cohort.value,subject:subject.value});
-    for(const {row,score} of hits){
+    const filters={cohort:cohort.value,subject:subject.value,limit:50};
+    const lex=mode.value==="semantic"?[]:lexical.search(question,filters);
+    let dense=[], neuralFailed=false;
+    if(mode.value!=="lexical"){
+      try{
+        const {input_ids,attention_mask}=tokenizer.inputs(question,manifest.max_length);
+        const tensor=ids=>new ort.Tensor("int64",BigInt64Array.from(ids,BigInt),[1,ids.length]);
+        const output=await session.run({input_ids:tensor(input_ids),attention_mask:tensor(attention_mask)});
+        dense=rankPassages(output.embedding.data,rows,vectors,128,filters);
+      }catch(error){if(mode.value==="semantic"||!lex.length)throw error;neuralFailed=true;}
+    }
+    const hits=mode.value==="semantic"?dense.slice(0,5).map(h=>({...h,kind:"semantic-only"})):
+      mode.value==="lexical"||neuralFailed?lex.slice(0,5).map(h=>({...h,kind:"lexical"})):hybridRank(lex,dense);
+    const corrected=hits.some(h=>h.corrections?.length);
+    for(const {row,score,kind,corrections} of hits){
       const item=document.createElement("li");item.className="ai-result";
       const heading=document.createElement("h2"),link=document.createElement("a");
       link.href=sourceHref(row.source);link.textContent=row.headings?.at(-1)||row.title;heading.append(link);
-      const meta=document.createElement("div");meta.className="ai-meta";meta.textContent=(names[row.subject]||row.subject)+" · "+row.layer+" · строки "+row.line_start+"–"+row.line_end+" · сходство "+score.toFixed(3);
+      const meta=document.createElement("div");meta.className="ai-meta";meta.textContent=(names[row.subject]||row.subject)+" · "+row.layer+" · строки "+row.line_start+"–"+row.line_end+" · "+(kind==="semantic-only"?"сходство "+score.toFixed(3):kind==="hybrid"?"гибридное совпадение":"совпадение терминов")+(corrections?.length?" · учтена возможная опечатка":"");
       const body=document.createElement("div");body.className="ai-excerpt";body.textContent=row.text;
       item.append(heading,meta,body);
       if(row.document_warning){const warning=document.createElement("div");warning.className="ai-warning";warning.textContent="В источнике есть места, требующие проверки.";item.append(warning);}
       results.append(item);
     }
-    status.textContent=hits.length?"Кандидаты: "+hits.length+" · "+Math.round(performance.now()-t)+" мс · без проверенного порога отказа.":"В выбранном разделе нет доступных фрагментов.";
-  }catch(error){fail(error);}finally{button.disabled=cohort.disabled=subject.disabled=false;}
+    status.textContent=hits.length?"Кандидаты: "+hits.length+" · "+Math.round(performance.now()-t)+" мс"+(corrected?" · учтены возможные опечатки":"")+(neuralFailed?" · нейросеть недоступна, поиск по словам":!lex.length&&mode.value==="hybrid"?" · точных совпадений нет, только ИИ":"")+" · проверьте источник.":"Подходящих совпадений не найдено. Уточните вопрос или выберите другой предмет.";
+  }catch(error){fail(error);}finally{button.disabled=cohort.disabled=subject.disabled=mode.disabled=false;}
 });
 init().catch(fail);
