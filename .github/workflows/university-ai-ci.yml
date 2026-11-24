@@ -1,4 +1,4 @@
-name: University AI indexing tests
+name: University AI indexing and search tests
 
 on:
   push:
@@ -21,3 +21,4 @@ jobs:
           python-version: '3.12'
       - run: python3 -m unittest discover -s ai/tests -v
       - run: python3 -m ai.indexing.build_index
+      - run: python3 -m ai.evaluation.evaluate

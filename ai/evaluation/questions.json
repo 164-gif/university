@@ -1,0 +1,99 @@
+[
+  {
+    "q": "Формула скалярного произведения",
+    "subject": "analytical_geometry",
+    "layer": "notes",
+    "source": "05 - Скалярное произведение.md",
+    "anchor": "\\vec a\\cdot\\vec b=|\\vec a|"
+  },
+  {
+    "q": "Что такое векторное произведение?",
+    "subject": "analytical_geometry",
+    "layer": "notes",
+    "source": "07 - Векторное произведение.md",
+    "anchor": "называется векторным произведением"
+  },
+  {
+    "q": "Определение гиперболы",
+    "subject": "analytical_geometry",
+    "layer": "notes",
+    "source": "12 - Гипербола.md",
+    "anchor": "абсолютная величина разности расстояний"
+  },
+  {
+    "q": "Что такое множество?",
+    "subject": "mathematical_analysis",
+    "layer": "notes",
+    "source": "01 - Множества.md",
+    "anchor": "совокупность всех объектов"
+  },
+  {
+    "q": "Как меняется скорость при среднем ускорении?",
+    "subject": "physics",
+    "layer": "notes",
+    "source": "03 - Ускорение и классификация движения.md",
+    "anchor": "Средним ускорением неравномерного движения"
+  },
+  {
+    "q": "Тангенциальная составляющая ускорения",
+    "subject": "physics",
+    "layer": "notes",
+    "source": "03 - Ускорение и классификация движения.md",
+    "anchor": "определяет быстроту изменения скорости по модулю"
+  },
+  {
+    "q": "Чем отличаются шифрование и кодирование?",
+    "subject": "introduction_to_information_security",
+    "layer": "notes",
+    "source": "06 - Основы криптографии.md",
+    "anchor": "скрыть семантическую"
+  },
+  {
+    "q": "Что объединяет криптология?",
+    "subject": "introduction_to_information_security",
+    "layer": "notes",
+    "source": "06 - Основы криптографии.md",
+    "anchor": "объединяет криптографию и криптоанализ"
+  },
+  {
+    "q": "Что такое шифр Цезаря?",
+    "subject": "introduction_to_information_security",
+    "layer": "notes",
+    "source": "06 - Основы криптографии.md",
+    "anchor": "со сдвигом на заданное количество позиций"
+  },
+  {
+    "q": "Сколько элементов содержит пустое множество?",
+    "subject": "mathematical_analysis",
+    "layer": "exam",
+    "source": "Реальные тесты по множествам - вопрос-ответ.md",
+    "anchor": "**Ответ:** Ноль."
+  },
+  {
+    "q": "Свойство коммутативности пересечения множеств",
+    "subject": "mathematical_analysis",
+    "layer": "exam",
+    "source": "Реальные тесты по множествам - вопрос-ответ.md",
+    "anchor": "A\\cap B=B\\cap A"
+  },
+  {
+    "q": "Какова частота компрессий грудной клетки у взрослого?",
+    "subject": "obzh",
+    "layer": "tests",
+    "source": "shock_resuscitation_all_variants_QA.md",
+    "anchor": "100–120 в минуту"
+  },
+  {
+    "q": "криптолгия",
+    "subject": "introduction_to_information_security",
+    "layer": "notes",
+    "source": "06 - Основы криптографии.md",
+    "anchor": "объединяет криптографию и криптоанализ"
+  },
+  {
+    "q": "квазибульбулятор фырчеплюх",
+    "subject": "physics",
+    "layer": "notes",
+    "absent": true
+  }
+]
