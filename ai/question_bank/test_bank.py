@@ -18,7 +18,7 @@ class BankTests(unittest.TestCase):
     def test_review_not_augmented(self):
         self.assertEqual(augment([{"id":"x","query":"Произведение векторов","positive_ids":[],"label":"review"}]),[])
     def test_protect_formula(self):
-        s="Что значит $\\mathrm{скорость}=123$ и не равно 42?"
+        s="Что $\\mathrm{скорость}=123$ и не равно 42?"
         self.assertEqual(corrupt(s,"delete",random.Random(1))[0],s)
     def test_question_without_answer(self):
         r=list(scan_questions("subjects/physics/exam/QUESTIONS.md",("c","physics","exam"),"## Вопросы\n\n1. Что такое масса?\n2. Как найти силу?\n",[]))
