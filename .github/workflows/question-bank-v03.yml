@@ -1,0 +1,39 @@
+name: University AI v0.3 question bank
+on:
+  push:
+    branches: [feature/university-ai-v03-dataset]
+    paths: ['ai/question_bank/**', '.github/workflows/question-bank-v03.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: question-bank-v03
+  cancel-in-progress: false
+jobs:
+  generate:
+    if: github.ref == 'refs/heads/feature/university-ai-v03-dataset'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate augmentation
+        run: python -m unittest ai.question_bank.test_bank -v
+      - name: Generate dataset
+        run: python -m ai.question_bank.build --count 1000 --variants 5 --seed 42
+      - name: Upload question bank
+        uses: actions/upload-artifact@v4
+        with:
+          name: university-ai-v03-question-bank
+          path: ai/data/v03/
+          retention-days: 90
+      - name: Commit generated bank on experimental branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f ai/data/v03
+          git diff --cached --quiet && exit 0
+          git commit -m "data(ai): generated v0.3 question bank and typo augmentation"
+          git push origin HEAD:refs/heads/feature/university-ai-v03-dataset
